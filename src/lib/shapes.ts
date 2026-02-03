@@ -222,10 +222,10 @@ export const generateShape = (shapeType: string, width: number, height: number):
  * Generates a rhombus (all sides equal)
  */
 function generateRhombus(width: number, height: number): GridPoint[] {
-    // Choose a random orientation: diamond or rotated
+    // Choose between different rhombus orientations for variety
     const orientation = Math.random();
 
-    if (orientation < 0.5) {
+    if (orientation < 0.25) {
         // Diamond orientation (aligned with grid diagonals)
         const centerX = randomInt(1, width - 1);
         const centerY = randomInt(1, height - 1);
@@ -237,8 +237,8 @@ function generateRhombus(width: number, height: number): GridPoint[] {
             createPoint(centerY + size, centerX),      // Bottom
             createPoint(centerY, centerX - size)       // Left
         ];
-    } else {
-        // Rotated rhombus
+    } else if (orientation < 0.5) {
+        // Grid-aligned square rhombus
         const baseX = randomInt(0, width - 2);
         const baseY = randomInt(0, height - 2);
         const size = Math.min(2, width - baseX, height - baseY);
@@ -249,6 +249,98 @@ function generateRhombus(width: number, height: number): GridPoint[] {
             createPoint(baseY + size, baseX + size),
             createPoint(baseY + size, baseX)
         ];
+    } else {
+        // Skinny rhombus with varied angles
+        // Strategy: Create a line (horizontal or vertical), place two endpoints on it,
+        // then place two more points equidistant from the midpoint
+
+        const isHorizontal = Math.random() < 0.5;
+
+        // Check if grid is large enough for skinny rhombus (need at least 3 units)
+        if (width < 3 || height < 3) {
+            // Fall back to diamond for small grids
+            const centerX = randomInt(1, width - 1);
+            const centerY = randomInt(1, height - 1);
+            const size = Math.min(centerX, width - centerX, centerY, height - centerY);
+
+            return [
+                createPoint(centerY - size, centerX),
+                createPoint(centerY, centerX + size),
+                createPoint(centerY + size, centerX),
+                createPoint(centerY, centerX - size)
+            ];
+        }
+
+        if (isHorizontal) {
+            // Horizontal line
+            // Use EVEN distance (2 or 4) so midpoint is an integer
+            // This corresponds to odd number of points (3 or 5)
+            const lineDistance = 2 * randomInt(1, 2); // 2 or 4
+            const perpDistance = randomInt(1, 2);
+
+            // Make sure line fits: lineEndX = lineStartX + lineDistance must be <= width
+            if (lineDistance > width) {
+                // Fallback to diamond
+                const centerX = randomInt(1, width - 1);
+                const centerY = randomInt(1, height - 1);
+                const size = Math.min(centerX, width - centerX, centerY, height - centerY);
+                return [
+                    createPoint(centerY - size, centerX),
+                    createPoint(centerY, centerX + size),
+                    createPoint(centerY + size, centerX),
+                    createPoint(centerY, centerX - size)
+                ];
+            }
+
+            // Position the line
+            const lineY = randomInt(perpDistance, height - perpDistance);
+            const lineStartX = randomInt(0, width - lineDistance);
+            const lineEndX = lineStartX + lineDistance;
+
+            // Midpoint of the line (now guaranteed to be integer)
+            const midX = lineStartX + lineDistance / 2;
+
+            // Four points of the rhombus
+            const p1 = createPoint(lineY, lineStartX);           // Left endpoint
+            const p2 = createPoint(lineY - perpDistance, midX);   // Top point
+            const p3 = createPoint(lineY, lineEndX);              // Right endpoint
+            const p4 = createPoint(lineY + perpDistance, midX);   // Bottom point
+
+            return [p1, p2, p3, p4];
+        } else {
+            // Vertical line
+            const lineDistance = 2 * randomInt(1, 2); // 2 or 4
+            const perpDistance = randomInt(1, 2);
+
+            if (lineDistance > height) {
+                // Fallback to diamond
+                const centerX = randomInt(1, width - 1);
+                const centerY = randomInt(1, height - 1);
+                const size = Math.min(centerX, width - centerX, centerY, height - centerY);
+                return [
+                    createPoint(centerY - size, centerX),
+                    createPoint(centerY, centerX + size),
+                    createPoint(centerY + size, centerX),
+                    createPoint(centerY, centerX - size)
+                ];
+            }
+
+            // Position the line
+            const lineX = randomInt(perpDistance, width - perpDistance);
+            const lineStartY = randomInt(0, height - lineDistance);
+            const lineEndY = lineStartY + lineDistance;
+
+            // Midpoint of the line (now guaranteed to be integer)
+            const midY = lineStartY + lineDistance / 2;
+
+            // Four points of the rhombus
+            const p1 = createPoint(lineStartY, lineX);            // Top endpoint
+            const p2 = createPoint(midY, lineX + perpDistance);   // Right point
+            const p3 = createPoint(lineEndY, lineX);              // Bottom endpoint
+            const p4 = createPoint(midY, lineX - perpDistance);   // Left point
+
+            return [p1, p2, p3, p4];
+        }
     }
 }
 

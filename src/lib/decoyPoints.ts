@@ -10,7 +10,7 @@ export interface DecoyConfig {
 }
 
 const DEFAULT_CONFIG: DecoyConfig = {
-	numDecoys: 7,
+	numDecoys: 5,
 	maxAttempts: 75,
 };
 
