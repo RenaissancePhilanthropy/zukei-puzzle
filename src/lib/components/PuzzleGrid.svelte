@@ -113,17 +113,27 @@
                 firstPoint.column === point.column &&
                 firstPoint.corner === point.corner;
 
+            let newLine: Line = {
+                from: firstPoint,
+                to: point
+            };
+            
+
+            // Reset the first point, if we've made a complete polygon
+            if (lines.find(line =>
+                (line.from.row === point.row && line.from.column === point.column && line.from.corner === point.corner) ||
+                (line.to.row === point.row && line.to.column === point.column && line.to.corner === point.corner)
+            )){
+                firstPoint = null;
+                mousePosition = null;
+            } else {
+                firstPoint = point;
+            }
+            
             if (!isSamePoint) {
                 // Add the line
-                lines.push({
-                    from: firstPoint,
-                    to: point
-                });
+                lines.push(newLine);
             }
-
-            // Reset the first point
-            firstPoint = null;
-            mousePosition = null;
         }
     };
 
