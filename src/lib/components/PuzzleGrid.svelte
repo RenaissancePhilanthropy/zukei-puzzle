@@ -117,6 +117,7 @@
 
             // Reset the first point
             firstPoint = null;
+            mousePosition = null;
         }
     };
 
