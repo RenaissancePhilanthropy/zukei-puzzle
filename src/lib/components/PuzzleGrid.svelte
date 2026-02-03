@@ -116,6 +116,13 @@
         }
     };
 
+    const onLineClicked = (index: number, event: MouseEvent) => {
+        event.stopPropagation(); // Prevent grid deselection
+        // Remove the clicked line
+        lines.splice(index, 1);
+        lines = lines; // Trigger reactivity
+    };
+
     const onGridKeyDown = (event: KeyboardEvent) => {
         // Deselect on Escape key
         if (event.key === 'Escape' && firstPoint) {
@@ -263,11 +270,12 @@
     </div>
 
     <svg class="lines-overlay">
-        {#each lines as line}
+        {#each lines as line, index}
             {@const fromCoords = getPointCoordinates(line.from)}
             {@const toCoords = getPointCoordinates(line.to)}
             {#if fromCoords && toCoords}
                 <line
+                    class="drawn-line"
                     x1={fromCoords.x}
                     y1={fromCoords.y}
                     x2={toCoords.x}
@@ -275,6 +283,7 @@
                     stroke="#2b2a29"
                     stroke-width="3"
                     stroke-linecap="round"
+                    onclick={(e) => onLineClicked(index, e)}
                 />
             {/if}
         {/each}
@@ -348,5 +357,16 @@
         height: 100%;
         pointer-events: none;
         overflow: visible;
+    }
+
+    .drawn-line {
+        pointer-events: auto;
+        cursor: pointer;
+        transition: stroke 0.2s ease;
+    }
+
+    .drawn-line:hover {
+        stroke: #ff4444;
+        stroke-width: 4;
     }
 </style>
