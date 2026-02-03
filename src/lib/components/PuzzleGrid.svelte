@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { generateShape, validateShape, ShapeTypes } from "$lib/shapes";
     import { onMount } from "svelte";
 
     type PuzzleGridProps = {
@@ -10,10 +11,22 @@
     export type GridPoint = {
         row: number;
         column: number;
-        corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+        corner?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
     };
 
     let { rows, columns, visiblePoints = $bindable(createDefaultVisiblePoints(rows, columns, false)) }: PuzzleGridProps = $props();
+
+    export function setVisiblePoints(newVisiblePoints: boolean[][]) {
+        visiblePoints = newVisiblePoints;
+    }
+
+    export function getVisiblePoints(): boolean[][] {
+        return visiblePoints;
+    }
+
+    export function setAllVisiblePoints(visible: boolean) {
+        visiblePoints = createDefaultVisiblePoints(rows, columns, visible);
+    }
 
     /**
      * Creates a default visible points grid where all points are visible.
@@ -43,7 +56,7 @@
     let firstPoint = $state<GridPoint | null>(null);
     let lines = $state<Line[]>([]);
     let mousePosition = $state<{ x: number; y: number } | null>(null);
-
+    let generatedShapeType = $state<string | null>(null);
     /**
      * Find a grid point element by grid coordinates.
      * @param x Column coordinate (0 to columns)
@@ -53,34 +66,30 @@
     export function findGridPoint(x: number, y: number): HTMLElement | null {
         // Validate coordinates are within grid bounds
         if (x < 0 || x > columns || y < 0 || y > rows || !gridElement) {
+            console.log("findGridPoint: Coordinates out of bounds or gridElement not set", {x, y, columns, rows});
             return null;
         }
 
         // Determine which cell and corner contains this point
         let cellRow: number;
         let cellColumn: number;
-        let corner: string;
         
         if (y === rows && x === columns) {
             // Bottom-right corner
             cellRow = rows - 1;
             cellColumn = columns - 1;
-            corner = 'bottom-right';
         } else if (y === rows) {
             // Bottom edge
             cellRow = rows - 1;
             cellColumn = x;
-            corner = 'bottom-left';
         } else if (x === columns) {
             // Right edge
             cellRow = y;
             cellColumn = columns - 1;
-            corner = 'top-right';
         } else {
             // Interior or top-left points
             cellRow = y;
             cellColumn = x;
-            corner = 'top-left';
         }
 
         // Find the cell element
@@ -88,10 +97,7 @@
             `.puzzle-cell[data-row="${cellRow}"][data-column="${cellColumn}"]`
         );
 
-        if (!cell) return null;
-
-        // Find the point button within the cell
-        return cell.querySelector(`.puzzle-point.${corner}`) as HTMLElement;
+        return cell ? cell.querySelector(`.puzzle-point[data-row="${y}"][data-column="${x}"]`) as HTMLElement : null;
     }
 
     const onPointClicked = (point: GridPoint, event: MouseEvent) => {
@@ -180,19 +186,28 @@
         return { x, y };
     };
 
+
+
     onMount(() => {
         // Random init board
         if (!visiblePoints) {
             visiblePoints = createDefaultVisiblePoints(rows, columns, false);
         }
 
-        for (let r = 0; r <= rows; r++) {
-            for (let c = 0; c <= columns; c++) {
-                visiblePoints[r][c] = Math.random() < 0.5;
-            }
+        // Pick random shape type
+        const shapeTypes = Object.values(ShapeTypes);
+        const randomShape = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
+        generatedShapeType = randomShape;
+        console.log("Randomly selected shape type:", randomShape);
+        const points = generateShape(randomShape, columns, rows);
+        console.log("Generated points for shape:", points);
+
+        for (let point of points) {
+            console.log(`Point - Row: ${point.row}, Column: ${point.column}, Corner: ${point.corner}`);
+            visiblePoints[point.row][point.column] = true;
         }
 
-
+        visiblePoints = visiblePoints; // Trigger reactivity
     });
 </script>
 
@@ -280,6 +295,12 @@
             {/if}
         {/if}
     </svg>
+
+    {#if generatedShapeType}
+        <div class="generated-shape-info" aria-live="polite" style="margin-top: 10px; font-size: 0.9rem; color: #555;">
+            Generated Shape: {generatedShapeType}
+        </div>
+    {/if}
 </div>
 
 
