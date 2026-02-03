@@ -110,8 +110,8 @@ describe('PuzzleGrid', () => {
 	describe('validateShape', () => {
 		it('should return false when given fewer than 3 points', () => {
 			const points: GridPoint[] = [
-				{ row: 0, column: 0, corner: 'top-left' },
-				{ row: 0, column: 1, corner: 'top-left' }
+				{ row: 0, column: 0 },
+				{ row: 0, column: 1 }
 			];
 			const result = validateShape(ShapeTypes.Rhombus, points);
 			expect(result).toBe(false);
@@ -119,11 +119,11 @@ describe('PuzzleGrid', () => {
 
 		it('should return false when given more than 4 points', () => {
 			const points: GridPoint[] = [
-				{ row: 0, column: 0, corner: 'top-left' },
-				{ row: 0, column: 1, corner: 'top-left' },
-				{ row: 1, column: 0, corner: 'top-left' },
-				{ row: 1, column: 1, corner: 'top-left' },
-				{ row: 2, column: 2, corner: 'top-left' }
+				{ row: 0, column: 0 },
+				{ row: 0, column: 1 },
+				{ row: 1, column: 0 },
+				{ row: 1, column: 1 },
+				{ row: 2, column: 2 }
 			];
 			const result = validateShape(ShapeTypes.Rectangle, points);
 			expect(result).toBe(false);
@@ -132,9 +132,9 @@ describe('PuzzleGrid', () => {
 		describe('Triangle shapes (3 points)', () => {
 			it('should validate an isosceles triangle with 3 points', () => {
 				const points: GridPoint[] = [
-					{ row: 0, column: 1, corner: 'top-left' },
-					{ row: 2, column: 0, corner: 'top-left' },
-					{ row: 2, column: 2, corner: 'top-left' }
+					{ row: 0, column: 1 },
+					{ row: 2, column: 0 },
+					{ row: 2, column: 2 }
 				];
 				const result = validateShape(ShapeTypes.IsoscelesTriangle, points);
 				expect(result).toBe(true);

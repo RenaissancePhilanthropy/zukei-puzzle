@@ -6,15 +6,15 @@
         rows: number;
         columns: number;
         visiblePoints?: boolean[][];
+        generatedShapeType?: string | null;
     };
 
     export type GridPoint = {
         row: number;
         column: number;
-        corner?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
     };
 
-    let { rows, columns, visiblePoints = $bindable(createDefaultVisiblePoints(rows, columns, false)) }: PuzzleGridProps = $props();
+    let { rows, columns, visiblePoints = $bindable(createDefaultVisiblePoints(rows, columns, false)), generatedShapeType = $bindable(null) }: PuzzleGridProps = $props();
 
     export function setVisiblePoints(newVisiblePoints: boolean[][]) {
         visiblePoints = newVisiblePoints;
@@ -56,48 +56,20 @@
     let firstPoint = $state<GridPoint | null>(null);
     let lines = $state<Line[]>([]);
     let mousePosition = $state<{ x: number; y: number } | null>(null);
-    let generatedShapeType = $state<string | null>(null);
+
     /**
      * Find a grid point element by grid coordinates.
-     * @param x Column coordinate (0 to columns)
-     * @param y Row coordinate (0 to rows)
+     * @param column Column coordinate (0 to columns)
+     * @param row Row coordinate (0 to rows)
      * @return The HTML element at that point, or null if not found
      */
-    export function findGridPoint(x: number, y: number): HTMLElement | null {
+    export function findGridPoint(column: number, row: number): HTMLElement | null {
         // Validate coordinates are within grid bounds
-        if (x < 0 || x > columns || y < 0 || y > rows || !gridElement) {
-            console.log("findGridPoint: Coordinates out of bounds or gridElement not set", {x, y, columns, rows});
+        if (column < 0 || column > columns || row < 0 || row > rows || !gridElement) {
             return null;
         }
 
-        // Determine which cell and corner contains this point
-        let cellRow: number;
-        let cellColumn: number;
-        
-        if (y === rows && x === columns) {
-            // Bottom-right corner
-            cellRow = rows - 1;
-            cellColumn = columns - 1;
-        } else if (y === rows) {
-            // Bottom edge
-            cellRow = rows - 1;
-            cellColumn = x;
-        } else if (x === columns) {
-            // Right edge
-            cellRow = y;
-            cellColumn = columns - 1;
-        } else {
-            // Interior or top-left points
-            cellRow = y;
-            cellColumn = x;
-        }
-
-        // Find the cell element
-        const cell = gridElement.querySelector(
-            `.puzzle-cell[data-row="${cellRow}"][data-column="${cellColumn}"]`
-        );
-
-        return cell ? cell.querySelector(`.puzzle-point[data-row="${y}"][data-column="${x}"]`) as HTMLElement : null;
+        return gridElement.querySelector(`.puzzle-point[data-row="${row}"][data-column="${column}"]`) as HTMLElement;
     }
 
     const onPointClicked = (point: GridPoint, event: MouseEvent) => {
@@ -110,26 +82,25 @@
             // Second click - create a line
             const isSamePoint =
                 firstPoint.row === point.row &&
-                firstPoint.column === point.column &&
-                firstPoint.corner === point.corner;
+                firstPoint.column === point.column;
 
             let newLine: Line = {
                 from: firstPoint,
                 to: point
             };
-            
+
 
             // Reset the first point, if we've made a complete polygon
             if (lines.find(line =>
-                (line.from.row === point.row && line.from.column === point.column && line.from.corner === point.corner) ||
-                (line.to.row === point.row && line.to.column === point.column && line.to.corner === point.corner)
+                (line.from.row === point.row && line.from.column === point.column) ||
+                (line.to.row === point.row && line.to.column === point.column)
             )){
                 firstPoint = null;
                 mousePosition = null;
             } else {
                 firstPoint = point;
             }
-            
+
             if (!isSamePoint) {
                 // Add the line
                 lines.push(newLine);
@@ -170,16 +141,12 @@
     const isPointSelected = (point: GridPoint): boolean => {
         if (!firstPoint) return false;
         return firstPoint.row === point.row &&
-               firstPoint.column === point.column &&
-               firstPoint.corner === point.corner;
+               firstPoint.column === point.column;
     };
 
     // Helper to get pixel coordinates for a grid point
     const getPointCoordinates = (point: GridPoint): { x: number; y: number } | null => {
-        const pointElement = findGridPoint(
-            point.corner === 'top-right' || point.corner === 'bottom-right' ? point.column + 1 : point.column,
-            point.corner === 'bottom-left' || point.corner === 'bottom-right' ? point.row + 1 : point.row
-        );
+        const pointElement = findGridPoint(point.column, point.row);
 
         if (!pointElement || !gridElement) return null;
 
@@ -196,7 +163,51 @@
         return { x, y };
     };
 
+    export function check(): boolean {
+        console.log("Checking lines:", lines);
 
+        if (lines.length === 0) {
+            console.log("No lines drawn");
+            return false;
+        }
+
+        // Build an adjacency map to verify the lines form a closed polygon
+        const adjacencyMap = new Map<string, GridPoint[]>();
+
+        const pointKey = (p: GridPoint) => `${p.row},${p.column}`;
+
+        for (const line of lines) {
+            const fromKey = pointKey(line.from);
+            const toKey = pointKey(line.to);
+
+            if (!adjacencyMap.has(fromKey)) {
+                adjacencyMap.set(fromKey, []);
+            }
+            if (!adjacencyMap.has(toKey)) {
+                adjacencyMap.set(toKey, []);
+            }
+
+            adjacencyMap.get(fromKey)!.push(line.to);
+            adjacencyMap.get(toKey)!.push(line.from);
+        }
+
+        // Check that each point has exactly 2 connections (forms a closed polygon)
+        const uniquePoints: GridPoint[] = [];
+        for (const [key, connections] of adjacencyMap.entries()) {
+            if (connections.length !== 2) {
+                console.log(`Point ${key} has ${connections.length} connections, expected 2`);
+                return false;
+            }
+            const [row, column] = key.split(',').map(Number);
+            uniquePoints.push({ row, column });
+        }
+
+        console.log("Polygon is closed with points:", uniquePoints);
+
+        // Verify the polygon matches the expected shape
+        const isValid = validateShape(generatedShapeType ?? 'None', uniquePoints);
+        return isValid;
+    }
 
     onMount(() => {
         // Random init board
@@ -213,7 +224,7 @@
         console.log("Generated points for shape:", points);
 
         for (let point of points) {
-            console.log(`Point - Row: ${point.row}, Column: ${point.column}, Corner: ${point.corner}`);
+            console.log(`Point - Row: ${point.row}, Column: ${point.column}`);
             visiblePoints[point.row][point.column] = true;
         }
 
@@ -223,50 +234,30 @@
 
 <div class="puzzle-grid-wrapper" onclick={onGridClicked} onkeydown={onGridKeyDown} onmousemove={onMouseMove} role="button" tabindex="-1">
     <div class="puzzle-grid" bind:this={gridElement} style="grid-template-rows: repeat({rows}, 1fr); grid-template-columns: repeat({columns}, 1fr); aspect-ratio: {columns} / {rows};">
+        <!-- Render cells for the dashed grid background -->
         {#each Array(rows) as _, row}
             {#each Array(columns) as _, column}
-                <div class="puzzle-cell" data-row={row} data-column={column}>
-                    {#if isPointVisible(column, row)}
-                        <button
-                            class="puzzle-point top-left"
-                            class:selected={isPointSelected({row, column, corner: 'top-left'})}
-                            onclick={(e) => onPointClicked({row, column, corner: 'top-left'}, e)}
-                            aria-label="Point at {row}, {column}"
-                            data-row={row}
-                            data-column={column}>
-                        </button>
-                    {/if}
-                    {#if column === columns - 1 && isPointVisible(column + 1, row)}
-                        <button
-                            class="puzzle-point top-right"
-                            class:selected={isPointSelected({row, column, corner: 'top-right'})}
-                            onclick={(e) => onPointClicked({row, column, corner: 'top-right'}, e)}
-                            aria-label="Point at {row}, {column + 1}"
-                            data-row={row}
-                            data-column={column + 1}>
-                        </button>
-                    {/if}
-                    {#if row === rows - 1 && isPointVisible(column, row + 1)}
-                        <button
-                            class="puzzle-point bottom-left"
-                            class:selected={isPointSelected({row, column, corner: 'bottom-left'})}
-                            onclick={(e) => onPointClicked({row, column, corner: 'bottom-left'}, e)}
-                            aria-label="Point at {row + 1}, {column}"
-                            data-row={row + 1}
-                            data-column={column}>
-                        </button>
-                    {/if}
-                    {#if row === rows - 1 && column === columns - 1 && isPointVisible(column + 1, row + 1)}
-                        <button
-                            class="puzzle-point bottom-right"
-                            class:selected={isPointSelected({row, column, corner: 'bottom-right'})}
-                            onclick={(e) => onPointClicked({row, column, corner: 'bottom-right'}, e)}
-                            aria-label="Point at {row + 1}, {column + 1}"
-                            data-row={row + 1}
-                            data-column={column + 1}>
-                        </button>
-                    {/if}
-                </div>
+                <div class="puzzle-cell" data-row={row} data-column={column}></div>
+            {/each}
+        {/each}
+
+        <!-- Render points on top of the grid -->
+        {#each Array(rows + 1) as _, row}
+            {#each Array(columns + 1) as _, column}
+                {#if isPointVisible(column, row)}
+                    <button
+                        class="puzzle-point"
+                        class:selected={isPointSelected({row, column})}
+                        onclick={(e) => onPointClicked({row, column}, e)}
+                        aria-label="Point at row {row}, column {column}"
+                        data-row={row}
+                        data-column={column}
+                        style="
+                            grid-row: {row + 1};
+                            grid-column: {column + 1};
+                        ">
+                    </button>
+                {/if}
             {/each}
         {/each}
     </div>
@@ -305,12 +296,6 @@
             {/if}
         {/if}
     </svg>
-
-    {#if generatedShapeType}
-        <div class="generated-shape-info" aria-live="polite" style="margin-top: 10px; font-size: 0.9rem; color: #555;">
-            Generated Shape: {generatedShapeType}
-        </div>
-    {/if}
 </div>
 
 
@@ -324,6 +309,7 @@
 
     .puzzle-grid {
         display: grid;
+        position: relative;
     }
 
     .puzzle-cell {
@@ -336,41 +322,22 @@
         height: 20px;
         background-color: #2b2a29;
         border-radius: 50%;
-        position: absolute;
         cursor: pointer;
         border: 2px solid transparent;
         transition: all 0.2s ease;
+        position: absolute;
+        transform: translate(-50%, -50%);
     }
 
     .puzzle-point:hover {
         background-color: #4a4948;
-        transform: scale(1.2);
+        transform: translate(-50%, -50%) scale(1.2);
     }
 
     .puzzle-point.selected {
         background-color: #007bff;
         border-color: #0056b3;
-        transform: scale(1.3);
-    }
-
-    .puzzle-point.top-left {
-        top: -10px;
-        left: -10px;
-    }
-
-    .puzzle-point.top-right {
-        top: -10px;
-        right: -10px;
-    }
-
-    .puzzle-point.bottom-left {
-        bottom: -10px;
-        left: -10px;
-    }
-
-    .puzzle-point.bottom-right {
-        bottom: -10px;
-        right: -10px;
+        transform: translate(-50%, -50%) scale(1.3);
     }
 
     .lines-overlay {
