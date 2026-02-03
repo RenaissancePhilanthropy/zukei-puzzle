@@ -42,6 +42,7 @@
 
     let firstPoint = $state<GridPoint | null>(null);
     let lines = $state<Line[]>([]);
+    let mousePosition = $state<{ x: number; y: number } | null>(null);
 
     /**
      * Find a grid point element by grid coordinates.
@@ -93,7 +94,9 @@
         return cell.querySelector(`.puzzle-point.${corner}`) as HTMLElement;
     }
 
-    const onPointClicked = (point: GridPoint) => {
+    const onPointClicked = (point: GridPoint, event: MouseEvent) => {
+        event.stopPropagation(); // Prevent deselection when clicking a point
+
         if (!firstPoint) {
             // First click - select the starting point
             firstPoint = point;
@@ -114,6 +117,36 @@
 
             // Reset the first point
             firstPoint = null;
+        }
+    };
+
+    const onGridClicked = () => {
+        // Deselect when clicking on the grid background
+        if (firstPoint) {
+            firstPoint = null;
+            mousePosition = null;
+        }
+    };
+
+    const onGridKeyDown = (event: KeyboardEvent) => {
+        // Deselect on Escape key
+        if (event.key === 'Escape' && firstPoint) {
+            firstPoint = null;
+            mousePosition = null;
+        }
+    };
+
+    const onMouseMove = (event: MouseEvent) => {
+        // Track mouse position when in connection mode
+        if (firstPoint && gridElement) {
+            const wrapperElement = gridElement.parentElement;
+            if (!wrapperElement) return;
+
+            const wrapperRect = wrapperElement.getBoundingClientRect();
+            mousePosition = {
+                x: event.clientX - wrapperRect.left,
+                y: event.clientY - wrapperRect.top
+            };
         }
     };
 
@@ -162,7 +195,7 @@
     });
 </script>
 
-<div class="puzzle-grid-wrapper">
+<div class="puzzle-grid-wrapper" onclick={onGridClicked} onkeydown={onGridKeyDown} onmousemove={onMouseMove} role="button" tabindex="-1">
     <div class="puzzle-grid" bind:this={gridElement} style="grid-template-rows: repeat({rows}, 1fr); grid-template-columns: repeat({columns}, 1fr); aspect-ratio: {columns} / {rows};">
         {#each Array(rows) as _, row}
             {#each Array(columns) as _, column}
@@ -171,7 +204,7 @@
                         <button
                             class="puzzle-point top-left"
                             class:selected={isPointSelected({row, column, corner: 'top-left'})}
-                            onclick={() => onPointClicked({row, column, corner: 'top-left'})}
+                            onclick={(e) => onPointClicked({row, column, corner: 'top-left'}, e)}
                             aria-label="Point at {row}, {column}"
                             data-row={row}
                             data-column={column}>
@@ -181,7 +214,7 @@
                         <button
                             class="puzzle-point top-right"
                             class:selected={isPointSelected({row, column, corner: 'top-right'})}
-                            onclick={() => onPointClicked({row, column, corner: 'top-right'})}
+                            onclick={(e) => onPointClicked({row, column, corner: 'top-right'}, e)}
                             aria-label="Point at {row}, {column + 1}"
                             data-row={row}
                             data-column={column + 1}>
@@ -191,7 +224,7 @@
                         <button
                             class="puzzle-point bottom-left"
                             class:selected={isPointSelected({row, column, corner: 'bottom-left'})}
-                            onclick={() => onPointClicked({row, column, corner: 'bottom-left'})}
+                            onclick={(e) => onPointClicked({row, column, corner: 'bottom-left'}, e)}
                             aria-label="Point at {row + 1}, {column}"
                             data-row={row + 1}
                             data-column={column}>
@@ -201,7 +234,7 @@
                         <button
                             class="puzzle-point bottom-right"
                             class:selected={isPointSelected({row, column, corner: 'bottom-right'})}
-                            onclick={() => onPointClicked({row, column, corner: 'bottom-right'})}
+                            onclick={(e) => onPointClicked({row, column, corner: 'bottom-right'}, e)}
                             aria-label="Point at {row + 1}, {column + 1}"
                             data-row={row + 1}
                             data-column={column + 1}>
@@ -228,6 +261,23 @@
                 />
             {/if}
         {/each}
+
+        {#if firstPoint && mousePosition}
+            {@const fromCoords = getPointCoordinates(firstPoint)}
+            {#if fromCoords}
+                <line
+                    x1={fromCoords.x}
+                    y1={fromCoords.y}
+                    x2={mousePosition.x}
+                    y2={mousePosition.y}
+                    stroke="#007bff"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-dasharray="5,5"
+                    opacity="0.6"
+                />
+            {/if}
+        {/if}
     </svg>
 </div>
 
