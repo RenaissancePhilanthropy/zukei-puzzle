@@ -1,5 +1,6 @@
 <script lang="ts">
     import { generateShape, validateShape, ShapeTypes } from "$lib/shapes";
+    import { addDecoyPoints } from "$lib/decoyPoints";
     import { onMount } from "svelte";
 
     type PuzzleGridProps = {
@@ -216,8 +217,8 @@
         return isValid;
     }
 
-    onMount(() => {
-        // Random init board
+    const generatePuzzle = () => {
+        // Clear board
         if (!visiblePoints) {
             visiblePoints = createDefaultVisiblePoints(rows, columns, false);
         }
@@ -230,12 +231,27 @@
         const points = generateShape(randomShape, columns, rows);
         console.log("Generated points for shape:", points);
 
+        // Put target shape down
         for (let point of points) {
             console.log(`Point - Row: ${point.row}, Column: ${point.column}`);
             visiblePoints[point.row][point.column] = true;
         }
 
+        // Add decoy points that don't create duplicate target shapes
+        addDecoyPoints(
+            randomShape,
+            points,
+            visiblePoints,
+            columns,
+            rows,
+            { numDecoys: 3, maxAttempts: 50 }
+        );
+
         visiblePoints = visiblePoints; // Trigger reactivity
+    };
+
+    onMount(() => {
+        generatePuzzle();
     });
 </script>
 
