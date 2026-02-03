@@ -1,7 +1,10 @@
 <script lang="ts">
+    import { onMount } from "svelte";
+
     type PuzzleGridProps = {
         rows: number;
         columns: number;
+        visiblePoints?: boolean[][];
     };
 
     export type GridPoint = {
@@ -10,7 +13,25 @@
         corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
     };
 
-    let { rows, columns }: PuzzleGridProps = $props();
+    let { rows, columns, visiblePoints = $bindable(createDefaultVisiblePoints(rows, columns, false)) }: PuzzleGridProps = $props();
+
+    /**
+     * Creates a default visible points grid where all points are visible.
+     * Grid is (rows + 1) x (columns + 1) in size.
+     */
+    function createDefaultVisiblePoints(rows: number, columns: number, defaultVisibility: boolean = true): boolean[][] {
+        return Array(rows + 1).fill(null).map(() => Array(columns + 1).fill(defaultVisibility));
+    }
+
+    /**
+     * Check if a point at given grid coordinates is visible.
+     */
+    function isPointVisible(x: number, y: number): boolean {
+        if (!visiblePoints || y >= visiblePoints.length || x >= visiblePoints[0]?.length) {
+            return true; // Default to visible if not specified
+        }
+        return visiblePoints[y][x];
+    }
 
     let gridElement: HTMLElement;
 
@@ -124,6 +145,21 @@
 
         return { x, y };
     };
+
+    onMount(() => {
+        // Random init board
+        if (!visiblePoints) {
+            visiblePoints = createDefaultVisiblePoints(rows, columns, false);
+        }
+
+        for (let r = 0; r <= rows; r++) {
+            for (let c = 0; c <= columns; c++) {
+                visiblePoints[r][c] = Math.random() < 0.5;
+            }
+        }
+
+
+    });
 </script>
 
 <div class="puzzle-grid-wrapper">
@@ -131,15 +167,17 @@
         {#each Array(rows) as _, row}
             {#each Array(columns) as _, column}
                 <div class="puzzle-cell" data-row={row} data-column={column}>
-                    <button
-                        class="puzzle-point top-left"
-                        class:selected={isPointSelected({row, column, corner: 'top-left'})}
-                        onclick={() => onPointClicked({row, column, corner: 'top-left'})}
-                        aria-label="Point at {row}, {column}"
-                        data-row={row}
-                        data-column={column}>
-                    </button>
-                    {#if column === columns - 1}
+                    {#if isPointVisible(column, row)}
+                        <button
+                            class="puzzle-point top-left"
+                            class:selected={isPointSelected({row, column, corner: 'top-left'})}
+                            onclick={() => onPointClicked({row, column, corner: 'top-left'})}
+                            aria-label="Point at {row}, {column}"
+                            data-row={row}
+                            data-column={column}>
+                        </button>
+                    {/if}
+                    {#if column === columns - 1 && isPointVisible(column + 1, row)}
                         <button
                             class="puzzle-point top-right"
                             class:selected={isPointSelected({row, column, corner: 'top-right'})}
@@ -149,7 +187,7 @@
                             data-column={column + 1}>
                         </button>
                     {/if}
-                    {#if row === rows - 1}
+                    {#if row === rows - 1 && isPointVisible(column, row + 1)}
                         <button
                             class="puzzle-point bottom-left"
                             class:selected={isPointSelected({row, column, corner: 'bottom-left'})}
@@ -159,7 +197,7 @@
                             data-column={column}>
                         </button>
                     {/if}
-                    {#if row === rows - 1 && column === columns - 1}
+                    {#if row === rows - 1 && column === columns - 1 && isPointVisible(column + 1, row + 1)}
                         <button
                             class="puzzle-point bottom-right"
                             class:selected={isPointSelected({row, column, corner: 'bottom-right'})}
