@@ -8,9 +8,13 @@
 </script>
 
 <div class="page-container">
-    <h1>Puzzle Grid Demo</h1>
-    <p>This page demonstrates the PuzzleGrid component.</p>
-    <PuzzleGrid rows={PUZZLE_CONFIG.defaultGridSize.rows} columns={PUZZLE_CONFIG.defaultGridSize.columns} bind:generatedShapeType={generatedShapeType} bind:this={puzzleGridRef}></PuzzleGrid>
+    <div class="instructions" style="margin-bottom: 10px;">
+        <strong>Instructions:</strong> A Zukei puzzle is a Japanese logic puzzle in which a grid is presented with a number of points shown at different intersections. Each grid is presented along with the name of a geometric figure. The goal of the puzzle is to determine which points on the grid are the vertices of the named geometric figure. Identify and connect the vertices that form the given shape, then check your solution using the button below.
+    </div>
+
+    <div class="puzzle-grid-container" style="border: 1px solid #ccc; padding: 10px; max-width: 500px; margin: 0 auto;">
+        <PuzzleGrid rows={PUZZLE_CONFIG.defaultGridSize.rows} columns={PUZZLE_CONFIG.defaultGridSize.columns} bind:generatedShapeType={generatedShapeType} bind:this={puzzleGridRef}></PuzzleGrid>
+    </div>
 
     {#if generatedShapeType}
         <div class="generated-shape-info" aria-live="polite" style="margin-top: 10px; font-size: 0.9rem; color: #555;">

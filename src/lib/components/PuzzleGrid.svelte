@@ -112,6 +112,11 @@
 
     const onLineClicked = (index: number, event: MouseEvent) => {
         event.stopPropagation(); // Prevent grid deselection
+
+        if(firstPoint) {
+            return; // Don't allow line removal while in connection mode
+        }
+
         // Remove the clicked line
         lines.splice(index, 1);
         lines = lines; // Trigger reactivity
@@ -272,7 +277,7 @@
         {/each}
     </div>
 
-    <svg class="lines-overlay">
+    <svg class="lines-overlay" class:connection-mode={firstPoint !== null}>
         {#each lines as line, index}
             {@const fromCoords = getPointCoordinates(line.from)}
             {@const toCoords = getPointCoordinates(line.to)}
@@ -364,11 +369,14 @@
 
     .drawn-line {
         pointer-events: auto;
-        cursor: pointer;
         transition: stroke 0.2s ease;
     }
 
-    .drawn-line:hover {
+    .lines-overlay:not(.connection-mode) .drawn-line {
+        cursor: pointer;
+    }
+
+    .lines-overlay:not(.connection-mode) .drawn-line:hover {
         stroke: #ff4444; /* THEME.colors.lineHover */
         stroke-width: 4; /* THEME.sizes.lineWidthHover */
     }
