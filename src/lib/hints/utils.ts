@@ -159,3 +159,31 @@ export function linesToOrderedPoints(lines: Line[]): GridPoint[] {
   const uniquePoints = extractUniquePoints(lines);
   return sortPointsClockwise(uniquePoints);
 }
+
+/**
+ * Calculates the angle in degrees at a vertex formed by three points.
+ * @param point1 First point forming one arm of the angle
+ * @param vertex The vertex point where the angle is measured
+ * @param point2 Second point forming the other arm of the angle
+ * @returns Angle in degrees (0-180)
+ */
+export function calculateAngle(point1: GridPoint, vertex: GridPoint, point2: GridPoint): number {
+  // Vectors from vertex to each point
+  const v1x = point1.column - vertex.column;
+  const v1y = point1.row - vertex.row;
+  const v2x = point2.column - vertex.column;
+  const v2y = point2.row - vertex.row;
+
+  // Calculate angle using dot product and magnitudes
+  const dotProduct = v1x * v2x + v1y * v2y;
+  const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+  const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+
+  if (mag1 === 0 || mag2 === 0) {
+    return 0;
+  }
+
+  // Get angle in radians, then convert to degrees
+  const angleRad = Math.acos(dotProduct / (mag1 * mag2));
+  return angleRad * (180 / Math.PI);
+}

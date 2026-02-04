@@ -1,11 +1,12 @@
 <script lang="ts">
-  import type { LineHighlight, PointHighlight } from "$lib/hints/types";
+  import type { LineHighlight, PointHighlight, AngleHighlight } from "$lib/hints/types";
   import type { GridPoint, Line } from "$lib/types";
   import { HINT_THEME } from "$lib/constants/hintTheme";
 
   type Props = {
     lineHighlights: LineHighlight[];
     pointHighlights?: PointHighlight[];
+    angleHighlights?: AngleHighlight[];
     getPointCoordinates: (point: GridPoint) => { x: number; y: number } | null;
     userLines?: Line[];
     viewBox?: string;
@@ -14,6 +15,7 @@
   let {
     lineHighlights,
     pointHighlights = [],
+    angleHighlights = [],
     getPointCoordinates,
     userLines = [],
     viewBox = "0 0 400 400"
@@ -51,8 +53,57 @@
       .filter(Boolean) ?? []
   );
 
+  // Compute pixel coordinates for highlighted angles
+  const highlightedAngles = $derived(
+    angleHighlights
+      ?.map(highlight => {
+        const vertexCoords = getPointCoordinates(highlight.vertex);
+        const point1Coords = getPointCoordinates(highlight.point1);
+        const point2Coords = getPointCoordinates(highlight.point2);
+
+        if (!vertexCoords || !point1Coords || !point2Coords) return null;
+
+        return {
+          ...highlight,
+          vertexCoords,
+          point1Coords,
+          point2Coords
+        };
+      })
+      .filter(Boolean) ?? []
+  );
+
   function getStrokeColor(type: string): string {
     return HINT_THEME.lineColors[type as keyof typeof HINT_THEME.lineColors] || '#000';
+  }
+
+  // Helper to calculate angle arc path
+  function getAngleArcPath(
+    vertexX: number,
+    vertexY: number,
+    point1X: number,
+    point1Y: number,
+    point2X: number,
+    point2Y: number,
+    radius: number = 20
+  ): string {
+    // Calculate angles for both arms
+    const angle1 = Math.atan2(point1Y - vertexY, point1X - vertexX);
+    const angle2 = Math.atan2(point2Y - vertexY, point2X - vertexX);
+
+    // Calculate arc endpoints
+    const startX = vertexX + radius * Math.cos(angle1);
+    const startY = vertexY + radius * Math.sin(angle1);
+    const endX = vertexX + radius * Math.cos(angle2);
+    const endY = vertexY + radius * Math.sin(angle2);
+
+    // Determine sweep direction (always use smaller arc)
+    let angleDiff = angle2 - angle1;
+    if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+    if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+    const sweepFlag = angleDiff > 0 ? 1 : 0;
+
+    return `M ${startX} ${startY} A ${radius} ${radius} 0 0 ${sweepFlag} ${endX} ${endY}`;
   }
 </script>
 
@@ -123,6 +174,57 @@
           class="hint-label"
         >
           {point.label}
+        </text>
+      {/if}
+    {/if}
+  {/each}
+
+  <!-- Draw angle indicators -->
+  {#each highlightedAngles as angleHighlight}
+    {#if angleHighlight}
+      {@const arcPath = getAngleArcPath(
+        angleHighlight.vertexCoords.x,
+        angleHighlight.vertexCoords.y,
+        angleHighlight.point1Coords.x,
+        angleHighlight.point1Coords.y,
+        angleHighlight.point2Coords.x,
+        angleHighlight.point2Coords.y,
+        25
+      )}
+
+      <!-- Draw angle arc -->
+      <path
+        d={arcPath}
+        stroke={getStrokeColor(angleHighlight.highlightType)}
+        stroke-width="2"
+        fill="none"
+        opacity="0.8"
+      />
+
+      <!-- Draw angle label -->
+      {#if angleHighlight.label}
+        {@const midAngle1 = Math.atan2(
+          angleHighlight.point1Coords.y - angleHighlight.vertexCoords.y,
+          angleHighlight.point1Coords.x - angleHighlight.vertexCoords.x
+        )}
+        {@const midAngle2 = Math.atan2(
+          angleHighlight.point2Coords.y - angleHighlight.vertexCoords.y,
+          angleHighlight.point2Coords.x - angleHighlight.vertexCoords.x
+        )}
+        {@const avgAngle = (midAngle1 + midAngle2) / 2}
+        {@const labelRadius = 35}
+        {@const labelX = angleHighlight.vertexCoords.x + labelRadius * Math.cos(avgAngle)}
+        {@const labelY = angleHighlight.vertexCoords.y + labelRadius * Math.sin(avgAngle)}
+
+        <text
+          x={labelX}
+          y={labelY}
+          fill={getStrokeColor(angleHighlight.highlightType)}
+          font-size={HINT_THEME.sizes.labelFontSize}
+          text-anchor="middle"
+          class="hint-label angle-label"
+        >
+          {angleHighlight.label}
         </text>
       {/if}
     {/if}

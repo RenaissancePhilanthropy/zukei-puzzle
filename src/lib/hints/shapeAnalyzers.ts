@@ -1,5 +1,5 @@
-import type { HintData, ShapeAnalysis, LineHighlight } from "./types";
-import { calculateSideLengths, sortPointsClockwise, areParallel, arePerpendicular, linesToOrderedPoints } from "./utils";
+import type { HintData, ShapeAnalysis, LineHighlight, AngleHighlight } from "./types";
+import { calculateSideLengths, sortPointsClockwise, areParallel, arePerpendicular, linesToOrderedPoints, calculateAngle } from "./utils";
 import { GEOMETRY_TOLERANCES } from "$lib/constants/geometry";
 
 /**
@@ -189,6 +189,7 @@ export function analyzeRectangleFailure(analysis: ShapeAnalysis): HintData {
   });
 
   if (!allRightAngles) {
+    // Show sides as correct (green) and highlight incorrect angles
     const orderedLines = sortedPoints.map((point, i) => ({
       from: point,
       to: sortedPoints[(i + 1) % sortedPoints.length]
@@ -197,14 +198,32 @@ export function analyzeRectangleFailure(analysis: ShapeAnalysis): HintData {
     const lineHighlights: LineHighlight[] = orderedLines.map(line => ({
       from: line.from,
       to: line.to,
-      highlightType: 'incorrect'
+      highlightType: 'correct'  // Sides are correct
     }));
+
+    // Add angle highlights for each corner
+    const angleHighlights: AngleHighlight[] = sortedPoints.map((vertex, i) => {
+      const prev = sortedPoints[(i + 3) % 4];
+      const next = sortedPoints[(i + 1) % 4];
+      const angle = calculateAngle(prev, vertex, next);
+      const isRightAngle = arePerpendicular(prev, vertex, next);
+
+      return {
+        vertex,
+        point1: prev,
+        point2: next,
+        angle,
+        highlightType: isRightAngle ? 'correct' : 'incorrect',
+        label: `${Math.round(angle)}°`
+      };
+    });
 
     return {
       type: 'why',
       title: 'Angles Not Right Angles',
-      message: 'All corners of a rectangle must be 90-degree angles.',
+      message: 'All corners of a rectangle must be 90-degree angles. Your sides are correct, but the angles are not all 90°.',
       lineHighlights,
+      angleHighlights,
       detailedExplanation: 'Try using points that line up horizontally or vertically on the grid for perfect 90° angles.'
     };
   }
@@ -284,14 +303,31 @@ export function analyzeParallelogramFailure(analysis: ShapeAnalysis): HintData {
     const lineHighlights: LineHighlight[] = orderedLines.map(line => ({
       from: line.from,
       to: line.to,
-      highlightType: 'problematic'
+      highlightType: 'correct'  // Sides are correct (parallel and equal)
     }));
+
+    // Highlight all the right angles as problematic
+    const angleHighlights: AngleHighlight[] = sortedPoints.map((vertex, i) => {
+      const prev = sortedPoints[(i + 3) % 4];
+      const next = sortedPoints[(i + 1) % 4];
+      const angle = calculateAngle(prev, vertex, next);
+
+      return {
+        vertex,
+        point1: prev,
+        point2: next,
+        angle,
+        highlightType: 'incorrect',  // Right angles are wrong for parallelogram
+        label: `${Math.round(angle)}°`
+      };
+    });
 
     return {
       type: 'why',
       title: 'This is a Rectangle',
-      message: 'All angles are 90 degrees - this is a rectangle, not a parallelogram.',
+      message: 'All angles are 90 degrees - this is a rectangle, not a parallelogram. Your sides are correct, but the angles should not all be 90°.',
       lineHighlights,
+      angleHighlights,
       detailedExplanation: 'A parallelogram must NOT have right angles at all corners. Try creating a "pushed over" rectangle with angles that aren\'t 90°.'
     };
   }

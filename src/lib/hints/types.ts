@@ -33,6 +33,15 @@ export interface PointHighlight {
   label?: string;
 }
 
+export interface AngleHighlight {
+  vertex: GridPoint;        // The point where the angle is measured
+  point1: GridPoint;        // First point forming the angle
+  point2: GridPoint;        // Second point forming the angle
+  angle: number;            // Angle in degrees
+  highlightType: LineHighlightType;  // Same color scheme as lines
+  label?: string;           // Optional label like "85°" or "Right angle"
+}
+
 /**
  * Complete hint data structure for display
  */
@@ -42,6 +51,7 @@ export interface HintData {
   message: string;
   lineHighlights: LineHighlight[];
   pointHighlights?: PointHighlight[];
+  angleHighlights?: AngleHighlight[];
   detailedExplanation?: string; // Secondary text with more details
 }
 

@@ -15,12 +15,12 @@ export function getRhombusGuidance(): HintData {
     { row: 2, column: 0 }
   ];
 
-  // Example rhombus 2: Tilted orientation
+  // Example 2: Square (special rhombus with right angles)
   const example2: GridPoint[] = [
     { row: 0, column: 4 },
-    { row: -1, column: 6 },
-    { row: 0, column: 8 },
-    { row: 1, column: 6 }
+    { row: 0, column: 6 },
+    { row: 2, column: 6 },
+    { row: 2, column: 4 }
   ];
 
   const lineHighlights: LineHighlight[] = [

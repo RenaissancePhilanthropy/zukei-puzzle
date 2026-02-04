@@ -140,6 +140,7 @@
       <HintVisualization
         lineHighlights={hintData.lineHighlights}
         pointHighlights={hintData.pointHighlights}
+        angleHighlights={hintData.angleHighlights}
         getPointCoordinates={coordinateFunction}
         {userLines}
         viewBox={viewBox()}
