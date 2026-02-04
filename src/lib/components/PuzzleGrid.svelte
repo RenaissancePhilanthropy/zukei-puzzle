@@ -318,6 +318,15 @@
         visiblePoints = visiblePoints; // Trigger reactivity
     };
 
+    /**
+     * Generate a new puzzle and clear current drawing
+     */
+    function handleNewPuzzle(): void {
+        clear();
+        closeHintModal();
+        generatePuzzle();
+    }
+
     onMount(() => {
         generatePuzzle();
     });
@@ -396,6 +405,7 @@
         hintData={currentHint}
         {getPointCoordinates}
         onClose={closeHintModal}
+        onNewPuzzle={handleNewPuzzle}
         userLines={lines}
     />
 {/if}

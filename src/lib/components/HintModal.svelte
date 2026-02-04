@@ -9,17 +9,21 @@
     hintData: HintData;
     getPointCoordinates: (point: GridPoint) => { x: number; y: number } | null;
     onClose: () => void;
+    onNewPuzzle?: () => void;
     userLines?: Line[];
     gridDimensions?: { width: number; height: number };
   };
 
-  let { hintData, getPointCoordinates, onClose, userLines = [], gridDimensions }: Props = $props();
+  let { hintData, getPointCoordinates, onClose, onNewPuzzle, userLines = [], gridDimensions }: Props = $props();
 
   let modalElement: HTMLDivElement;
 
   // For "what" hints (examples), use a virtual coordinate system
   // For "why" hints (user's shape), use the actual grid coordinates
   const isExampleHint = $derived(hintData.type === 'what' && hintData.lineHighlights.length > 0);
+
+  // Check if this is a success hint (title starts with "Correct!")
+  const isSuccessHint = $derived(hintData.title.startsWith('Correct!'));
 
   // Virtual coordinate mapping for example shapes (scales grid points to pixel coordinates)
   function getVirtualCoordinates(point: GridPoint): { x: number; y: number } | null {
@@ -34,7 +38,7 @@
   const coordinateFunction = $derived(isExampleHint ? getVirtualCoordinates : getPointCoordinates);
 
   // Calculate viewBox based on all points in the visualization
-  const viewBox = $derived(() => {
+  const viewBox = $derived.by(() => {
     if (gridDimensions) {
       return `0 0 ${gridDimensions.width} ${gridDimensions.height}`;
     }
@@ -143,7 +147,7 @@
         angleHighlights={hintData.angleHighlights}
         getPointCoordinates={coordinateFunction}
         userLines={isExampleHint ? [] : userLines}
-        viewBox={viewBox()}
+        viewBox={viewBox}
       />
     </div>
 
@@ -163,6 +167,9 @@
 
     <!-- Footer -->
     <div class="modal-footer">
+      {#if isSuccessHint && onNewPuzzle}
+        <button class="new-puzzle-button" onclick={onNewPuzzle}>New Puzzle</button>
+      {/if}
       <button class="close-button-large" onclick={onClose}>Close</button>
     </div>
   </div>
@@ -309,6 +316,7 @@
     border-top: 1px solid #dee2e6;
     display: flex;
     justify-content: flex-end;
+    gap: 0.75rem;
   }
 
   .close-button-large {
@@ -329,5 +337,25 @@
 
   .close-button-large:active {
     background: #004085;
+  }
+
+  .new-puzzle-button {
+    padding: 0.625rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .new-puzzle-button:hover {
+    background: #218838;
+  }
+
+  .new-puzzle-button:active {
+    background: #1e7e34;
   }
 </style>
