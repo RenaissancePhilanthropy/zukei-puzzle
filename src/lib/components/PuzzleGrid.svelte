@@ -5,6 +5,10 @@
     import { THEME } from "$lib/constants/theme";
     import { PUZZLE_CONFIG } from "$lib/constants/puzzleConfig";
     import { onMount } from "svelte";
+    import { analyzeUserAttempt, generateWhyHint, generateWhatHint, generateSuccessHint } from "$lib/hints/analyzer";
+    import { extractUniquePoints } from "$lib/hints/utils";
+    import type { HintData } from "$lib/hints/types";
+    import HintModal from "./HintModal.svelte";
 
     type PuzzleGridProps = {
         rows: number;
@@ -50,6 +54,10 @@
     let firstPoint = $state<GridPoint | null>(null);
     let lines = $state<Line[]>([]);
     let mousePosition = $state<{ x: number; y: number } | null>(null);
+
+    // Hint system state
+    let currentHint = $state<HintData | null>(null);
+    let showHintModal = $state(false);
 
     /**
      * Find a grid point element by grid coordinates.
@@ -151,7 +159,7 @@
     };
 
     // Helper to get pixel coordinates for a grid point
-    const getPointCoordinates = (point: GridPoint): { x: number; y: number } | null => {
+    export const getPointCoordinates = (point: GridPoint): { x: number; y: number } | null => {
         const pointElement = findGridPoint(point.column, point.row);
 
         if (!pointElement || !gridElement) return null;
@@ -168,6 +176,66 @@
 
         return { x, y };
     };
+
+    /**
+     * Get current user attempt for hint analysis
+     */
+    export function getCurrentAttempt(): { userPoints: GridPoint[]; userLines: Line[] } {
+        const userPoints = extractUniquePoints(lines);
+        return { userPoints, userLines: lines };
+    }
+
+    /**
+     * Show "why" hint explaining why the shape is wrong
+     */
+    function showWhyHint(): void {
+        const { userPoints, userLines } = getCurrentAttempt();
+
+        if (!generatedShapeType) return;
+
+        const analysis = analyzeUserAttempt(generatedShapeType, userPoints, userLines);
+        currentHint = generateWhyHint(analysis);
+        showHintModal = true;
+    }
+
+    /**
+     * Show success hint with shape description and parallel side highlighting
+     */
+    function showSuccessHint(): void {
+        const { userPoints } = getCurrentAttempt();
+
+        if (!generatedShapeType) return;
+
+        currentHint = generateSuccessHint(generatedShapeType, userPoints);
+        showHintModal = true;
+    }
+
+    /**
+     * Show "what" hint providing guidance about the target shape
+     */
+    export function showWhatHint(): void {
+        if (!generatedShapeType) return;
+
+        currentHint = generateWhatHint(generatedShapeType);
+        showHintModal = true;
+    }
+
+    /**
+     * Close the hint modal
+     */
+    export function closeHintModal(): void {
+        showHintModal = false;
+        currentHint = null;
+    }
+
+    /**
+     * Clear all drawn lines and reset selection
+     */
+    export function clear(): void {
+        lines = [];
+        firstPoint = null;
+        mousePosition = null;
+    }
 
     export function check(): boolean {
         if (lines.length === 0) {
@@ -209,6 +277,14 @@
             return false;
         }
         const isValid = validateShape(generatedShapeType, uniquePoints);
+
+        // Show appropriate hint based on validation result
+        if (!isValid) {
+            showWhyHint();
+        } else {
+            showSuccessHint();
+        }
+
         return isValid;
     }
 
@@ -315,6 +391,14 @@
     </svg>
 </div>
 
+{#if showHintModal && currentHint}
+    <HintModal
+        hintData={currentHint}
+        {getPointCoordinates}
+        onClose={closeHintModal}
+        userLines={lines}
+    />
+{/if}
 
 <style>
     .puzzle-grid-wrapper {
