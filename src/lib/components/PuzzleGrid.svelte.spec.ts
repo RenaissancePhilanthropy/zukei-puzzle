@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 
-import PuzzleGrid, { type GridPoint } from './PuzzleGrid.svelte';
+import PuzzleGrid from './PuzzleGrid.svelte';
+import type { GridPoint } from '$lib/types';
 import { validateShape, generateShape, ShapeTypes } from '$lib/shapes';
 
 describe('PuzzleGrid', () => {
@@ -22,8 +23,9 @@ describe('PuzzleGrid', () => {
 	});
 
 	describe('findGridPoint', () => {
-		it('should return null when no points are visible', () => {
+		it('should return null when no points are visible', async () => {
 			const point = component.component.findGridPoint(2, 2);
+			await tick();
 			expect(point).toBeNull();
 		});
 
@@ -156,7 +158,7 @@ describe('PuzzleGrid', () => {
 					{ row: 0, column: 1 },
 					{ row: 1, column: 0 }
 				];
-				const result = validateShape('UnknownTriangle', points);
+				const result = validateShape('UnknownTriangle' as any, points);
 				expect(result).toBe(false);
 			});
 		});
@@ -308,7 +310,7 @@ describe('PuzzleGrid', () => {
 		});
 
 		it('should return empty array for unknown shape type', () => {
-			const points = generateShape('UnknownShape', 3, 3);
+			const points = generateShape('UnknownShape' as any, 3, 3);
 			expect(points).toEqual([]);
 		});
 

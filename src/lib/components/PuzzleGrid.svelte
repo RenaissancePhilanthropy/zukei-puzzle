@@ -1,18 +1,16 @@
 <script lang="ts">
-    import { generateShape, validateShape, ShapeTypes } from "$lib/shapes";
+    import { generateShape, validateShape, ShapeTypes, type ShapeType } from "$lib/shapes";
     import { addDecoyPoints } from "$lib/decoyPoints";
+    import type { GridPoint, Line } from "$lib/types";
+    import { THEME } from "$lib/constants/theme";
+    import { PUZZLE_CONFIG } from "$lib/constants/puzzleConfig";
     import { onMount } from "svelte";
 
     type PuzzleGridProps = {
         rows: number;
         columns: number;
         visiblePoints?: boolean[][];
-        generatedShapeType?: string | null;
-    };
-
-    export type GridPoint = {
-        row: number;
-        column: number;
+        generatedShapeType?: ShapeType | null;
     };
 
     let { rows, columns, visiblePoints = $bindable(createDefaultVisiblePoints(rows, columns, false)), generatedShapeType = $bindable(null) }: PuzzleGridProps = $props();
@@ -48,11 +46,6 @@
     }
 
     let gridElement: HTMLElement;
-
-    type Line = {
-        from: GridPoint;
-        to: GridPoint;
-    };
 
     let firstPoint = $state<GridPoint | null>(null);
     let lines = $state<Line[]>([]);
@@ -172,10 +165,7 @@
     };
 
     export function check(): boolean {
-        console.log("Checking lines:", lines);
-
         if (lines.length === 0) {
-            console.log("No lines drawn");
             return false;
         }
 
@@ -203,17 +193,17 @@
         const uniquePoints: GridPoint[] = [];
         for (const [key, connections] of adjacencyMap.entries()) {
             if (connections.length !== 2) {
-                console.log(`Point ${key} has ${connections.length} connections, expected 2`);
                 return false;
             }
             const [row, column] = key.split(',').map(Number);
             uniquePoints.push({ row, column });
         }
 
-        console.log("Polygon is closed with points:", uniquePoints);
-
         // Verify the polygon matches the expected shape
-        const isValid = validateShape(generatedShapeType ?? 'None', uniquePoints);
+        if (!generatedShapeType) {
+            return false;
+        }
+        const isValid = validateShape(generatedShapeType, uniquePoints);
         return isValid;
     }
 
@@ -227,13 +217,10 @@
         const shapeTypes = Object.values(ShapeTypes);
         const randomShape = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
         generatedShapeType = randomShape;
-        console.log("Randomly selected shape type:", randomShape);
         const points = generateShape(randomShape, columns, rows);
-        console.log("Generated points for shape:", points);
 
         // Put target shape down
         for (let point of points) {
-            console.log(`Point - Row: ${point.row}, Column: ${point.column}`);
             visiblePoints[point.row][point.column] = true;
         }
 
@@ -244,7 +231,7 @@
             visiblePoints,
             columns,
             rows,
-            { numDecoys: 3, maxAttempts: 50 }
+            PUZZLE_CONFIG.decoyGeneration
         );
 
         visiblePoints = visiblePoints; // Trigger reactivity
@@ -296,8 +283,8 @@
                     y1={fromCoords.y}
                     x2={toCoords.x}
                     y2={toCoords.y}
-                    stroke="#2b2a29"
-                    stroke-width="3"
+                    stroke={THEME.colors.line}
+                    stroke-width={THEME.sizes.lineWidth}
                     stroke-linecap="round"
                     onclick={(e) => onLineClicked(index, e)}
                 />
@@ -312,8 +299,8 @@
                     y1={fromCoords.y}
                     x2={mousePosition.x}
                     y2={mousePosition.y}
-                    stroke="#007bff"
-                    stroke-width="3"
+                    stroke={THEME.colors.linePreview}
+                    stroke-width={THEME.sizes.lineWidth}
                     stroke-linecap="round"
                     stroke-dasharray="5,5"
                     opacity="0.6"
@@ -338,14 +325,14 @@
     }
 
     .puzzle-cell {
-        border: 1px dashed #222;
+        border: 1px dashed #222; /* THEME.colors.cellBorder */
         position: relative;
     }
 
     .puzzle-point {
-        width: 20px;
-        height: 20px;
-        background-color: #2b2a29;
+        width: 20px; /* THEME.sizes.point */
+        height: 20px; /* THEME.sizes.point */
+        background-color: #2b2a29; /* THEME.colors.point */
         border-radius: 50%;
         cursor: pointer;
         border: 2px solid transparent;
@@ -355,14 +342,14 @@
     }
 
     .puzzle-point:hover {
-        background-color: #4a4948;
-        transform: translate(-50%, -50%) scale(1.2);
+        background-color: #4a4948; /* THEME.colors.pointHover */
+        transform: translate(-50%, -50%) scale(1.2); /* THEME.sizes.pointScaleHover */
     }
 
     .puzzle-point.selected {
-        background-color: #007bff;
-        border-color: #0056b3;
-        transform: translate(-50%, -50%) scale(1.3);
+        background-color: #007bff; /* THEME.colors.pointSelected */
+        border-color: #0056b3; /* THEME.colors.pointSelectedBorder */
+        transform: translate(-50%, -50%) scale(1.3); /* THEME.sizes.pointScaleSelected */
     }
 
     .lines-overlay {
@@ -382,7 +369,7 @@
     }
 
     .drawn-line:hover {
-        stroke: #ff4444;
-        stroke-width: 4;
+        stroke: #ff4444; /* THEME.colors.lineHover */
+        stroke-width: 4; /* THEME.sizes.lineWidthHover */
     }
 </style>

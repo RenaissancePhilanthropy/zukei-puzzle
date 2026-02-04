@@ -1,5 +1,5 @@
-import type { GridPoint } from "./components/PuzzleGrid.svelte";
-import { validateShape } from "./shapes";
+import type { GridPoint } from "./types";
+import { validateShape, type ShapeType } from "./shapes";
 
 /**
  * Configuration for decoy point generation
@@ -25,7 +25,7 @@ const DEFAULT_CONFIG: DecoyConfig = {
  * @param config Optional configuration for number of decoys and max attempts
  */
 export function addDecoyPoints(
-	targetShapeType: string,
+	targetShapeType: ShapeType,
 	targetPoints: GridPoint[],
 	visiblePoints: boolean[][],
 	gridWidth: number,
@@ -34,11 +34,8 @@ export function addDecoyPoints(
 ): void {
 	const { numDecoys, maxAttempts } = { ...DEFAULT_CONFIG, ...config };
 
-	console.log(`Adding ${numDecoys} decoy points for ${targetShapeType} puzzle...`);
-
 	// Get all available grid positions (not currently visible)
 	let candidatePoints = getAllAvailablePoints(visiblePoints, gridWidth, gridHeight);
-	console.log(`Found ${candidatePoints.length} available candidate positions`);
 
 	let decoyCount = 0;
 	let attempts = 0;
@@ -62,15 +59,12 @@ export function addDecoyPoints(
 		visiblePoints[candidate.row][candidate.column] = true;
 		targetPoints.push(candidate); // Add to tracking for next iteration
 		decoyCount++;
-		console.log(`Added decoy point ${decoyCount} at (${candidate.row}, ${candidate.column}) after ${attempts} attempts`);
 	}
 
 	if (decoyCount < numDecoys) {
 		console.warn(
 			`Only added ${decoyCount} of ${numDecoys} requested decoy points after ${attempts} attempts`
 		);
-	} else {
-		console.log(`Successfully added ${decoyCount} decoy points`);
 	}
 }
 
@@ -86,7 +80,7 @@ export function addDecoyPoints(
 function wouldCreateTargetShape(
 	candidate: GridPoint,
 	existingPoints: GridPoint[],
-	targetShapeType: string
+	targetShapeType: ShapeType
 ): boolean {
 	// Determine how many points are needed for this shape type
 	const requiredPoints = targetShapeType === "IsoscelesTriangle" ? 3 : 4;

@@ -1,14 +1,16 @@
 <script lang="ts">
     import PuzzleGrid from '$lib/components/PuzzleGrid.svelte';
+    import { PUZZLE_CONFIG } from '$lib/constants/puzzleConfig';
+    import type { ShapeType } from '$lib/shapes';
 
     let puzzleGridRef: PuzzleGrid;
-    let generatedShapeType: string | null = null;
+    let generatedShapeType: ShapeType | null = null;
 </script>
 
 <div class="page-container">
     <h1>Puzzle Grid Demo</h1>
     <p>This page demonstrates the PuzzleGrid component.</p>
-    <PuzzleGrid rows={4} columns={4} bind:generatedShapeType={generatedShapeType} bind:this={puzzleGridRef}></PuzzleGrid>
+    <PuzzleGrid rows={PUZZLE_CONFIG.defaultGridSize.rows} columns={PUZZLE_CONFIG.defaultGridSize.columns} bind:generatedShapeType={generatedShapeType} bind:this={puzzleGridRef}></PuzzleGrid>
 
     {#if generatedShapeType}
         <div class="generated-shape-info" aria-live="polite" style="margin-top: 10px; font-size: 0.9rem; color: #555;">

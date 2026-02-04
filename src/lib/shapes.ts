@@ -1,10 +1,21 @@
-import type { GridPoint } from "./components/PuzzleGrid.svelte";
+import type { GridPoint } from "./types";
+import { GEOMETRY_TOLERANCES } from "./constants/geometry";
+
+/**
+ * Type-safe shape types
+ */
+export type ShapeType =
+    | 'Rhombus'
+    | 'IsoscelesTriangle'
+    | 'Parallelogram'
+    | 'Trapezoid'
+    | 'Rectangle';
 
 /**
  * Available shape types
  */
-export const ShapeTypes = {
-    Rhombus:  'Rhombus', 
+export const ShapeTypes: Record<ShapeType, ShapeType> = {
+    Rhombus: 'Rhombus',
     IsoscelesTriangle: 'IsoscelesTriangle',
     Parallelogram: 'Parallelogram',
     Trapezoid: 'Trapezoid',
@@ -17,16 +28,12 @@ export const ShapeTypes = {
  * @param points Set of points making up shape
  * @returns True if points make a shape of shapeType
  */
-export const validateShape = (shapeType: string, points: GridPoint[]) => {
-    console.log("Validating shape of type:", shapeType);
-
+export const validateShape = (shapeType: ShapeType, points: GridPoint[]): boolean => {
     if(points.length < 3) {
-        console.log("Not enough points to form a shape.");
         return false;
     }
 
     if(points.length > 4) {
-        console.log("Too many points to form a valid shape.");
         return false;
     }
 
@@ -44,34 +51,22 @@ export const validateShape = (shapeType: string, points: GridPoint[]) => {
     if(points.length === 3) {
         // Triangle validation logic here
         if(shapeType === ShapeTypes.IsoscelesTriangle) {
-            const sideLengths = [
-                Math.hypot(points[0].column - points[1].column, points[0].row - points[1].row),
-                Math.hypot(points[1].column - points[2].column, points[1].row - points[2].row),
-                Math.hypot(points[2].column - points[0].column, points[2].row - points[0].row),
-            ];
+            const sideLengths = calculateSideLengths(points);
 
             sideLengths.sort((a, b) => a - b);
 
             // If two sides are equal (within tolerance), it's isosceles
-            const tolerance = 0.001;
-            if(Math.abs(sideLengths[0] - sideLengths[1]) < tolerance ||
-               Math.abs(sideLengths[1] - sideLengths[2]) < tolerance) {
+            if(Math.abs(sideLengths[0] - sideLengths[1]) < GEOMETRY_TOLERANCES.sideLength ||
+               Math.abs(sideLengths[1] - sideLengths[2]) < GEOMETRY_TOLERANCES.sideLength) {
                 return true;
             } else {
-                console.log("Triangle is not isosceles.");
                 return false;
             }
         } else {
-            console.log("Unknown shape type for triangle:", shapeType);
             return false;
         }
     } else if (points.length === 4) {
-        const sideLengths = [
-            Math.hypot(points[0].column - points[1].column, points[0].row - points[1].row),
-            Math.hypot(points[1].column - points[2].column, points[1].row - points[2].row),
-            Math.hypot(points[2].column - points[3].column, points[2].row - points[3].row),
-            Math.hypot(points[3].column - points[0].column, points[3].row - points[0].row),
-        ];
+        const sideLengths = calculateSideLengths(points);
 
         const angles = [
             Math.atan2(points[1].row - points[0].row, points[1].column - points[0].column) - Math.atan2(points[3].row - points[0].row, points[3].column - points[0].column),
@@ -90,18 +85,15 @@ export const validateShape = (shapeType: string, points: GridPoint[]) => {
             if(allSidesEqual) {
                 return true;
             } else {
-                console.log("Rhombus sides are not equal.");
                 return false;
             }
         } else if(shapeType === ShapeTypes.Parallelogram) {
             // Parallelogram validation logic here
             if(!oppositeSidesEqual) {
-                console.log("Opposite sides of parallelogram must be equal.");
                 return false;
             }
 
-            if (Math.abs(angles[0]) < 0.01 || Math.abs(angles[1]) < 0.01 || Math.abs(angles[2]) < 0.01 || Math.abs(angles[3]) < 0.01) {
-                console.log("Angles of parallelogram are not valid.");
+            if (Math.abs(angles[0]) < GEOMETRY_TOLERANCES.angle || Math.abs(angles[1]) < GEOMETRY_TOLERANCES.angle || Math.abs(angles[2]) < GEOMETRY_TOLERANCES.angle || Math.abs(angles[3]) < GEOMETRY_TOLERANCES.angle) {
                 return false;
             }
 
@@ -115,13 +107,11 @@ export const validateShape = (shapeType: string, points: GridPoint[]) => {
             if(side01Parallel || side12Parallel) {
                 return true;
             } else {
-                console.log("Trapezoid does not have a pair of parallel sides.");
                 return false;
             }
         } else if(shapeType === ShapeTypes.Rectangle) {
             // Rectangle validation: opposite sides equal AND all angles are 90 degrees
             if (!oppositeSidesEqual) {
-                console.log("Rectangle must have opposite sides equal.");
                 return false;
             }
 
@@ -140,8 +130,7 @@ export const validateShape = (shapeType: string, points: GridPoint[]) => {
 
                 // Dot product should be zero for perpendicular vectors
                 const dotProduct = v1x * v2x + v1y * v2y;
-                if (Math.abs(dotProduct) > 0.001) {
-                    console.log("Rectangle must have all right angles.");
+                if (Math.abs(dotProduct) > GEOMETRY_TOLERANCES.vector) {
                     return false;
                 }
             }
@@ -161,6 +150,17 @@ function createPoint(row: number, column: number): GridPoint {
 }
 
 /**
+ * Calculates the side lengths of a polygon formed by the given points.
+ * Returns an array where each element is the distance from point i to point (i+1) % n.
+ */
+function calculateSideLengths(points: GridPoint[]): number[] {
+    return points.map((point, i) => {
+        const next = points[(i + 1) % points.length];
+        return Math.hypot(next.column - point.column, next.row - point.row);
+    });
+}
+
+/**
  * Check if two line segments are parallel by comparing their slopes
  */
 function areParallel(p1: GridPoint, p2: GridPoint, p3: GridPoint, p4: GridPoint): boolean {
@@ -170,19 +170,19 @@ function areParallel(p1: GridPoint, p2: GridPoint, p3: GridPoint, p4: GridPoint)
     const dy2 = p4.row - p3.row;
 
     // Check if both are vertical lines
-    if (Math.abs(dx1) < 0.001 && Math.abs(dx2) < 0.001) {
+    if (Math.abs(dx1) < GEOMETRY_TOLERANCES.parallelCheck && Math.abs(dx2) < GEOMETRY_TOLERANCES.parallelCheck) {
         return true;
     }
 
     // Check if both are horizontal lines
-    if (Math.abs(dy1) < 0.001 && Math.abs(dy2) < 0.001) {
+    if (Math.abs(dy1) < GEOMETRY_TOLERANCES.parallelCheck && Math.abs(dy2) < GEOMETRY_TOLERANCES.parallelCheck) {
         return true;
     }
 
     // Check if slopes are equal: dy1/dx1 === dy2/dx2
     // Rearranged to avoid division: dy1 * dx2 === dy2 * dx1
     const crossProduct = Math.abs(dy1 * dx2 - dy2 * dx1);
-    return crossProduct < 0.001;
+    return crossProduct < GEOMETRY_TOLERANCES.parallelCheck;
 }
 
 /**
@@ -193,27 +193,41 @@ function randomInt(min: number, max: number): number {
 }
 
 /**
+ * Generates a diamond-shaped rhombus centered in the available space.
+ * Used as a fallback when other rhombus orientations don't fit the grid.
+ */
+function generateDiamondFallback(gridWidth: number, gridHeight: number): GridPoint[] {
+    const centerX = randomInt(1, Math.max(1, gridWidth - 1));
+    const centerY = randomInt(1, Math.max(1, gridHeight - 1));
+    const size = Math.min(centerX, gridWidth - centerX, centerY, gridHeight - centerY);
+
+    return [
+        createPoint(centerY - size, centerX),      // Top
+        createPoint(centerY, centerX + size),      // Right
+        createPoint(centerY + size, centerX),      // Bottom
+        createPoint(centerY, centerX - size)       // Left
+    ];
+}
+
+/**
  * Generates a shape at a random position based on the specified type within the given grid dimensions.
  * @param shapeType Type of shape to generate
- * @param width Width of the grid (number of columns)
- * @param height Height of the grid (number of rows)
+ * @param gridWidth Width of the grid (number of columns)
+ * @param gridHeight Height of the grid (number of rows)
  * @returns Array of GridPoints representing the generated shape
  */
-export const generateShape = (shapeType: string, width: number, height: number): GridPoint[] => {
-    console.log("Generating shape of type:", shapeType);
-
+export const generateShape = (shapeType: ShapeType, gridWidth: number, gridHeight: number): GridPoint[] => {
     if (shapeType === ShapeTypes.Rhombus) {
-        return generateRhombus(width, height);
+        return generateRhombus(gridWidth, gridHeight);
     } else if (shapeType === ShapeTypes.IsoscelesTriangle) {
-        return generateIsoscelesTriangle(width, height);
+        return generateIsoscelesTriangle(gridWidth, gridHeight);
     } else if (shapeType === ShapeTypes.Parallelogram) {
-        return generateParallelogram(width, height);
+        return generateParallelogram(gridWidth, gridHeight);
     } else if (shapeType === ShapeTypes.Trapezoid) {
-        return generateTrapezoid(width, height);
+        return generateTrapezoid(gridWidth, gridHeight);
     } else if (shapeType === ShapeTypes.Rectangle) {
-        return generateRectangle(width, height);
+        return generateRectangle(gridWidth, gridHeight);
     } else {
-        console.log("Unknown shape type:", shapeType);
         return [];
     }
 };
@@ -221,15 +235,28 @@ export const generateShape = (shapeType: string, width: number, height: number):
 /**
  * Generates a rhombus (all sides equal)
  */
-function generateRhombus(width: number, height: number): GridPoint[] {
+function generateRhombus(gridWidth: number, gridHeight: number): GridPoint[] {
+    // For very small grids, use a simple grid-aligned square rhombus
+    if (gridWidth <= 2 || gridHeight <= 2) {
+        const baseX = 0;
+        const baseY = 0;
+        const size = Math.min(gridWidth, gridHeight, 2);
+        return [
+            createPoint(baseY, baseX),
+            createPoint(baseY, baseX + size),
+            createPoint(baseY + size, baseX + size),
+            createPoint(baseY + size, baseX)
+        ];
+    }
+
     // Choose between different rhombus orientations for variety
     const orientation = Math.random();
 
     if (orientation < 0.25) {
         // Diamond orientation (aligned with grid diagonals)
-        const centerX = randomInt(1, width - 1);
-        const centerY = randomInt(1, height - 1);
-        const size = Math.min(centerX, width - centerX, centerY, height - centerY);
+        const centerX = randomInt(1, Math.max(1, gridWidth - 1));
+        const centerY = randomInt(1, Math.max(1, gridHeight - 1));
+        const size = Math.min(centerX, gridWidth - centerX, centerY, gridHeight - centerY);
 
         return [
             createPoint(centerY - size, centerX),      // Top
@@ -239,9 +266,9 @@ function generateRhombus(width: number, height: number): GridPoint[] {
         ];
     } else if (orientation < 0.5) {
         // Grid-aligned square rhombus
-        const baseX = randomInt(0, width - 2);
-        const baseY = randomInt(0, height - 2);
-        const size = Math.min(2, width - baseX, height - baseY);
+        const baseX = randomInt(0, gridWidth - 2);
+        const baseY = randomInt(0, gridHeight - 2);
+        const size = Math.min(2, gridWidth - baseX, gridHeight - baseY);
 
         return [
             createPoint(baseY, baseX),
@@ -257,18 +284,9 @@ function generateRhombus(width: number, height: number): GridPoint[] {
         const isHorizontal = Math.random() < 0.5;
 
         // Check if grid is large enough for skinny rhombus (need at least 3 units)
-        if (width < 3 || height < 3) {
+        if (gridWidth < 3 || gridHeight < 3) {
             // Fall back to diamond for small grids
-            const centerX = randomInt(1, width - 1);
-            const centerY = randomInt(1, height - 1);
-            const size = Math.min(centerX, width - centerX, centerY, height - centerY);
-
-            return [
-                createPoint(centerY - size, centerX),
-                createPoint(centerY, centerX + size),
-                createPoint(centerY + size, centerX),
-                createPoint(centerY, centerX - size)
-            ];
+            return generateDiamondFallback(gridWidth, gridHeight);
         }
 
         if (isHorizontal) {
@@ -276,25 +294,25 @@ function generateRhombus(width: number, height: number): GridPoint[] {
             // Use EVEN distance (2 or 4) so midpoint is an integer
             // This corresponds to odd number of points (3 or 5)
             const lineDistance = 2 * randomInt(1, 2); // 2 or 4
-            const perpDistance = randomInt(1, 2);
 
-            // Make sure line fits: lineEndX = lineStartX + lineDistance must be <= width
-            if (lineDistance > width) {
+            // Make sure line fits: lineEndX = lineStartX + lineDistance must be <= gridWidth
+            if (lineDistance > gridWidth) {
                 // Fallback to diamond
-                const centerX = randomInt(1, width - 1);
-                const centerY = randomInt(1, height - 1);
-                const size = Math.min(centerX, width - centerX, centerY, height - centerY);
-                return [
-                    createPoint(centerY - size, centerX),
-                    createPoint(centerY, centerX + size),
-                    createPoint(centerY + size, centerX),
-                    createPoint(centerY, centerX - size)
-                ];
+                return generateDiamondFallback(gridWidth, gridHeight);
             }
 
+            // Constrain perpDistance to fit within grid bounds
+            // Need: lineY - perpDistance >= 0 AND lineY + perpDistance <= gridHeight
+            // So perpDistance must be at most floor(gridHeight / 2)
+            const maxPerpDistance = Math.floor(gridHeight / 2);
+            if (maxPerpDistance < 1) {
+                return generateDiamondFallback(gridWidth, gridHeight);
+            }
+            const perpDistance = randomInt(1, Math.min(2, maxPerpDistance));
+
             // Position the line
-            const lineY = randomInt(perpDistance, height - perpDistance);
-            const lineStartX = randomInt(0, width - lineDistance);
+            const lineY = randomInt(perpDistance, gridHeight - perpDistance);
+            const lineStartX = randomInt(0, gridWidth - lineDistance);
             const lineEndX = lineStartX + lineDistance;
 
             // Midpoint of the line (now guaranteed to be integer)
@@ -310,24 +328,24 @@ function generateRhombus(width: number, height: number): GridPoint[] {
         } else {
             // Vertical line
             const lineDistance = 2 * randomInt(1, 2); // 2 or 4
-            const perpDistance = randomInt(1, 2);
 
-            if (lineDistance > height) {
+            if (lineDistance > gridHeight) {
                 // Fallback to diamond
-                const centerX = randomInt(1, width - 1);
-                const centerY = randomInt(1, height - 1);
-                const size = Math.min(centerX, width - centerX, centerY, height - centerY);
-                return [
-                    createPoint(centerY - size, centerX),
-                    createPoint(centerY, centerX + size),
-                    createPoint(centerY + size, centerX),
-                    createPoint(centerY, centerX - size)
-                ];
+                return generateDiamondFallback(gridWidth, gridHeight);
             }
 
+            // Constrain perpDistance to fit within grid bounds
+            // Need: lineX - perpDistance >= 0 AND lineX + perpDistance <= gridWidth
+            // So perpDistance must be at most floor(gridWidth / 2)
+            const maxPerpDistance = Math.floor(gridWidth / 2);
+            if (maxPerpDistance < 1) {
+                return generateDiamondFallback(gridWidth, gridHeight);
+            }
+            const perpDistance = randomInt(1, Math.min(2, maxPerpDistance));
+
             // Position the line
-            const lineX = randomInt(perpDistance, width - perpDistance);
-            const lineStartY = randomInt(0, height - lineDistance);
+            const lineX = randomInt(perpDistance, gridWidth - perpDistance);
+            const lineStartY = randomInt(0, gridHeight - lineDistance);
             const lineEndY = lineStartY + lineDistance;
 
             // Midpoint of the line (now guaranteed to be integer)
@@ -347,15 +365,15 @@ function generateRhombus(width: number, height: number): GridPoint[] {
 /**
  * Generates an isosceles triangle (two sides equal)
  */
-function generateIsoscelesTriangle(width: number, height: number): GridPoint[] {
+function generateIsoscelesTriangle(gridWidth: number, gridHeight: number): GridPoint[] {
     const orientation = randomInt(0, 3);
 
     if (orientation === 0) {
         // Base at bottom, apex at top
-        const baseY = randomInt(2, height);
+        const baseY = randomInt(2, gridHeight);
         const apexY = randomInt(0, baseY - 2);
-        const apexX = randomInt(1, width - 1);
-        const baseWidth = Math.min(apexX, width - apexX, baseY - apexY);
+        const apexX = randomInt(1, gridWidth - 1);
+        const baseWidth = Math.min(apexX, gridWidth - apexX, baseY - apexY);
 
         return [
             createPoint(apexY, apexX),                      // Apex
@@ -364,10 +382,10 @@ function generateIsoscelesTriangle(width: number, height: number): GridPoint[] {
         ];
     } else if (orientation === 1) {
         // Base at top, apex at bottom
-        const baseY = randomInt(0, height - 2);
-        const apexY = randomInt(baseY + 2, height);
-        const apexX = randomInt(1, width - 1);
-        const baseWidth = Math.min(apexX, width - apexX, apexY - baseY);
+        const baseY = randomInt(0, gridHeight - 2);
+        const apexY = randomInt(baseY + 2, gridHeight);
+        const apexX = randomInt(1, gridWidth - 1);
+        const baseWidth = Math.min(apexX, gridWidth - apexX, apexY - baseY);
 
         return [
             createPoint(baseY, apexX - baseWidth),          // Base left
@@ -376,10 +394,10 @@ function generateIsoscelesTriangle(width: number, height: number): GridPoint[] {
         ];
     } else if (orientation === 2) {
         // Base on left, apex on right
-        const baseX = randomInt(0, width - 2);
-        const apexX = randomInt(baseX + 2, width);
-        const apexY = randomInt(1, height - 1);
-        const baseHeight = Math.min(apexY, height - apexY, apexX - baseX);
+        const baseX = randomInt(0, gridWidth - 2);
+        const apexX = randomInt(baseX + 2, gridWidth);
+        const apexY = randomInt(1, gridHeight - 1);
+        const baseHeight = Math.min(apexY, gridHeight - apexY, apexX - baseX);
 
         return [
             createPoint(apexY - baseHeight, baseX),         // Base top
@@ -388,10 +406,10 @@ function generateIsoscelesTriangle(width: number, height: number): GridPoint[] {
         ];
     } else {
         // Base on right, apex on left
-        const baseX = randomInt(2, width);
+        const baseX = randomInt(2, gridWidth);
         const apexX = randomInt(0, baseX - 2);
-        const apexY = randomInt(1, height - 1);
-        const baseHeight = Math.min(apexY, height - apexY, baseX - apexX);
+        const apexY = randomInt(1, gridHeight - 1);
+        const baseHeight = Math.min(apexY, gridHeight - apexY, baseX - apexX);
 
         return [
             createPoint(apexY, apexX),                      // Apex
@@ -404,15 +422,15 @@ function generateIsoscelesTriangle(width: number, height: number): GridPoint[] {
 /**
  * Generates a parallelogram (opposite sides parallel and equal)
  */
-function generateParallelogram(width: number, height: number): GridPoint[] {
+function generateParallelogram(gridWidth: number, gridHeight: number): GridPoint[] {
     // Ensure we have enough space for a parallelogram
-    const w = randomInt(2, Math.min(3, Math.max(2, width - 1)));
-    const h = randomInt(1, Math.min(2, Math.max(1, height - 1)));
-    const skew = randomInt(1, Math.min(2, Math.max(1, width - w - 1)));
+    const w = randomInt(2, Math.min(3, Math.max(2, gridWidth - 1)));
+    const h = randomInt(1, Math.min(2, Math.max(1, gridHeight - 1)));
+    const skew = randomInt(1, Math.min(2, Math.max(1, gridWidth - w - 1)));
 
     // Calculate safe starting position that keeps all points in bounds
-    const maxBaseX = width - w - skew;
-    const maxBaseY = height - h;
+    const maxBaseX = gridWidth - w - skew;
+    const maxBaseY = gridHeight - h;
     const baseX = randomInt(0, Math.max(0, maxBaseX));
     const baseY = randomInt(0, Math.max(0, maxBaseY));
 
@@ -427,18 +445,18 @@ function generateParallelogram(width: number, height: number): GridPoint[] {
 /**
  * Generates a trapezoid (one pair of parallel sides)
  */
-function generateTrapezoid(width: number, height: number): GridPoint[] {
+function generateTrapezoid(gridWidth: number, gridHeight: number): GridPoint[] {
     const orientation = Math.random();
 
     if (orientation < 0.5) {
         // Horizontal parallel sides (top and bottom parallel)
-        const h = randomInt(1, Math.min(4, height));
-        const topY = randomInt(0, Math.max(0, height - h));
+        const h = randomInt(1, Math.min(4, gridHeight));
+        const topY = randomInt(0, Math.max(0, gridHeight - h));
         const baseY = topY + h;
 
         // Generate two different lengths for parallel sides
         const minLength = 1;
-        const maxLength = Math.min(4, width);
+        const maxLength = Math.min(4, gridWidth);
         const side1Length = randomInt(minLength, maxLength);
         let side2Length = randomInt(minLength, maxLength);
         while (side2Length === side1Length) {
@@ -450,7 +468,7 @@ function generateTrapezoid(width: number, height: number): GridPoint[] {
         const longerLength = Math.max(side1Length, side2Length);
 
         // Position the longer side (base)
-        const baseLeft = randomInt(0, Math.max(0, width - longerLength));
+        const baseLeft = randomInt(0, Math.max(0, gridWidth - longerLength));
         const baseRight = baseLeft + longerLength;
 
         // Position the shorter side (top) - it should be within the bounds of the base
@@ -478,13 +496,13 @@ function generateTrapezoid(width: number, height: number): GridPoint[] {
         }
     } else {
         // Vertical parallel sides (left and right parallel)
-        const w = randomInt(1, Math.min(3, width));
-        const leftX = randomInt(0, Math.max(0, width - w));
+        const w = randomInt(1, Math.min(3, gridWidth));
+        const leftX = randomInt(0, Math.max(0, gridWidth - w));
         const rightX = leftX + w;
 
         // Generate two different lengths for parallel sides
         const minLength = 1;
-        const maxLength = Math.min(3, height);
+        const maxLength = Math.min(3, gridHeight);
         const side1Length = randomInt(minLength, maxLength);
         let side2Length = randomInt(minLength, maxLength);
         while (side2Length === side1Length) {
@@ -496,7 +514,7 @@ function generateTrapezoid(width: number, height: number): GridPoint[] {
         const longerLength = Math.max(side1Length, side2Length);
 
         // Position the longer side
-        const longerTop = randomInt(0, Math.max(0, height - longerLength));
+        const longerTop = randomInt(0, Math.max(0, gridHeight - longerLength));
         const longerBottom = longerTop + longerLength;
 
         // Position the shorter side - it should be within the bounds of the longer side
@@ -528,11 +546,11 @@ function generateTrapezoid(width: number, height: number): GridPoint[] {
 /**
  * Generates a rectangle (all angles 90 degrees, opposite sides equal)
  */
-function generateRectangle(width: number, height: number): GridPoint[] {
-    const baseX = randomInt(0, width - 2);
-    const baseY = randomInt(0, height - 2);
-    const w = randomInt(1, Math.min(3, width - baseX));
-    const h = randomInt(1, Math.min(3, height - baseY));
+function generateRectangle(gridWidth: number, gridHeight: number): GridPoint[] {
+    const baseX = randomInt(0, gridWidth - 2);
+    const baseY = randomInt(0, gridHeight - 2);
+    const w = randomInt(1, Math.min(3, gridWidth - baseX));
+    const h = randomInt(1, Math.min(3, gridHeight - baseY));
 
     return [
         createPoint(baseY, baseX),
