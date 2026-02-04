@@ -19,7 +19,7 @@
 
   // For "what" hints (examples), use a virtual coordinate system
   // For "why" hints (user's shape), use the actual grid coordinates
-  const isExampleHint = $derived(hintData.type === 'what' && hintData.lineHighlights.length > 0 && userLines.length === 0);
+  const isExampleHint = $derived(hintData.type === 'what' && hintData.lineHighlights.length > 0);
 
   // Virtual coordinate mapping for example shapes (scales grid points to pixel coordinates)
   function getVirtualCoordinates(point: GridPoint): { x: number; y: number } | null {
@@ -142,7 +142,7 @@
         pointHighlights={hintData.pointHighlights}
         angleHighlights={hintData.angleHighlights}
         getPointCoordinates={coordinateFunction}
-        {userLines}
+        userLines={isExampleHint ? [] : userLines}
         viewBox={viewBox()}
       />
     </div>
