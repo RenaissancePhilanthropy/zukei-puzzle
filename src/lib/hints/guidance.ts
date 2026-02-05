@@ -82,7 +82,7 @@ export function getIsoscelesTriangleGuidance(): HintData {
   // Example 2: Different orientation
   const example2: GridPoint[] = [
     { row: 0, column: 5 },
-    { row: -2, column: 7 },
+    { row: -1, column: 7 },
     { row: 1, column: 7 }
   ];
 
