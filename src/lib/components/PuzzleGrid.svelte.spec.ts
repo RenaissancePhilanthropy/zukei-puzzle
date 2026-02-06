@@ -24,8 +24,11 @@ describe('PuzzleGrid', () => {
 
 	describe('findGridPoint', () => {
 		it('should return null when no points are visible', async () => {
+			// First, ensure all grid points are hidden
+			component.component.setAllVisiblePoints(false);
+			await tick(); // Wait for DOM to update
+
 			const point = component.component.findGridPoint(2, 2);
-			await tick();
 			expect(point).toBeNull();
 		});
 
