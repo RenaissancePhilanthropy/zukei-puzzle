@@ -238,7 +238,15 @@
     }
 
     export function check(): boolean {
+        // Check if user has drawn any lines
         if (lines.length === 0) {
+            currentHint = {
+                type: 'why',
+                title: 'No Lines Drawn',
+                message: 'You need to connect points to form a shape. Click on points to draw lines between them.',
+                lineHighlights: []
+            };
+            showHintModal = true;
             return false;
         }
 
@@ -266,6 +274,18 @@
         const uniquePoints: GridPoint[] = [];
         for (const [key, connections] of adjacencyMap.entries()) {
             if (connections.length !== 2) {
+                // Not a valid closed polygon - show hint
+                currentHint = {
+                    type: 'why',
+                    title: 'Not a Closed Polygon',
+                    message: 'Your lines don\'t form a closed polygon. Each point must connect to exactly 2 other points to form a complete shape.',
+                    lineHighlights: lines.map(line => ({
+                        from: line.from,
+                        to: line.to,
+                        highlightType: 'problematic' as const
+                    }))
+                };
+                showHintModal = true;
                 return false;
             }
             const [row, column] = key.split(',').map(Number);
