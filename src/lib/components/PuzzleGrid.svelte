@@ -309,10 +309,8 @@
     }
 
     const generatePuzzle = () => {
-        // Clear board
-        if (!visiblePoints) {
-            visiblePoints = createDefaultVisiblePoints(rows, columns, false);
-        }
+        // Clear board - always reset to empty grid
+        visiblePoints = createDefaultVisiblePoints(rows, columns, false);
 
         // Pick random shape type
         const shapeTypes = Object.values(ShapeTypes);
