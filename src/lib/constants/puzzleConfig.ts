@@ -1,3 +1,5 @@
+import { DEFAULT_CONFIG as DEFAULT_DECOY_CONFIG } from '../decoyPoints';
+
 /**
  * Puzzle configuration constants
  */
@@ -9,11 +11,5 @@ export const PUZZLE_CONFIG = {
 	},
 
 	/** Decoy point generation settings */
-	decoyGeneration: {
-		/** Number of decoy points to add to each puzzle */
-		numDecoys: 3,
-
-		/** Maximum attempts to find valid decoy positions before giving up */
-		maxAttempts: 50,
-	},
+	decoyGeneration: DEFAULT_DECOY_CONFIG,
 } as const;

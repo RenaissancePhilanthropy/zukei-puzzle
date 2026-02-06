@@ -41,17 +41,18 @@ export const validateShape = (shapeType: ShapeType, points: GridPoint[]): boolea
     const centerY = points.reduce((sum, p) => sum + p.row, 0) / points.length;
 
     // Sort points in clockwise order
-    points.sort((a, b) => {
+    let sortedPoints = [...points];
+    sortedPoints.sort((a, b) => {
         const angleA = Math.atan2(a.row - centerY, a.column - centerX);
         const angleB = Math.atan2(b.row - centerY, b.column - centerX);
         return angleA - angleB;
     });
 
     // Shape-specific validation logic
-    if(points.length === 3) {
+    if(sortedPoints.length === 3) {
         // Triangle validation logic here
         if(shapeType === ShapeTypes.IsoscelesTriangle) {
-            const sideLengths = calculateSideLengths(points);
+            const sideLengths = calculateSideLengths(sortedPoints);
 
             sideLengths.sort((a, b) => a - b);
 
@@ -65,14 +66,14 @@ export const validateShape = (shapeType: ShapeType, points: GridPoint[]): boolea
         } else {
             return false;
         }
-    } else if (points.length === 4) {
-        const sideLengths = calculateSideLengths(points);
+    } else if (sortedPoints.length === 4) {
+        const sideLengths = calculateSideLengths(sortedPoints);
 
         const angles = [
-            Math.atan2(points[1].row - points[0].row, points[1].column - points[0].column) - Math.atan2(points[3].row - points[0].row, points[3].column - points[0].column),
-            Math.atan2(points[2].row - points[1].row, points[2].column - points[1].column) - Math.atan2(points[0].row - points[1].row, points[0].column - points[1].column),
-            Math.atan2(points[3].row - points[2].row, points[3].column - points[2].column) - Math.atan2(points[1].row - points[2].row, points[1].column - points[2].column),
-            Math.atan2(points[0].row - points[3].row, points[0].column - points[3].column) - Math.atan2(points[2].row - points[3].row, points[2].column - points[3].column),
+            Math.atan2(sortedPoints[1].row - sortedPoints[0].row, sortedPoints[1].column - sortedPoints[0].column) - Math.atan2(sortedPoints[3].row - sortedPoints[0].row, sortedPoints[3].column - sortedPoints[0].column),
+            Math.atan2(sortedPoints[2].row - sortedPoints[1].row, sortedPoints[2].column - sortedPoints[1].column) - Math.atan2(sortedPoints[0].row - sortedPoints[1].row, sortedPoints[0].column - sortedPoints[1].column),
+            Math.atan2(sortedPoints[3].row - sortedPoints[2].row, sortedPoints[3].column - sortedPoints[2].column) - Math.atan2(sortedPoints[1].row - sortedPoints[2].row, sortedPoints[1].column - sortedPoints[2].column),
+            Math.atan2(sortedPoints[0].row - sortedPoints[3].row, sortedPoints[0].column - sortedPoints[3].column) - Math.atan2(sortedPoints[2].row - sortedPoints[3].row, sortedPoints[2].column - sortedPoints[3].column),
         ];
 
         const oppositeSidesEqual = (sideLengths[0] === sideLengths[2]) && (sideLengths[1] === sideLengths[3]);
@@ -101,8 +102,8 @@ export const validateShape = (shapeType: ShapeType, points: GridPoint[]): boolea
             
         } else if(shapeType === ShapeTypes.Trapezoid) {
             // Trapezoid validation: check if at least one pair of opposite sides is parallel
-            const side01Parallel = areParallel(points[0], points[1], points[2], points[3]);
-            const side12Parallel = areParallel(points[1], points[2], points[3], points[0]);
+            const side01Parallel = areParallel(sortedPoints[0], sortedPoints[1], sortedPoints[2], sortedPoints[3]);
+            const side12Parallel = areParallel(sortedPoints[1], sortedPoints[2], sortedPoints[3], sortedPoints[0]);
 
             if(side01Parallel || side12Parallel) {
                 return true;
@@ -118,9 +119,9 @@ export const validateShape = (shapeType: ShapeType, points: GridPoint[]): boolea
             // Check if all angles are right angles by checking if adjacent sides are perpendicular
             // For each vertex, check if the dot product of adjacent edge vectors is zero
             for (let i = 0; i < 4; i++) {
-                const prev = points[(i + 3) % 4];
-                const curr = points[i];
-                const next = points[(i + 1) % 4];
+                const prev = sortedPoints[(i + 3) % 4];
+                const curr = sortedPoints[i];
+                const next = sortedPoints[(i + 1) % 4];
 
                 // Vectors from current point to adjacent points
                 const v1x = prev.column - curr.column;

@@ -9,17 +9,17 @@ export interface DecoyConfig {
 	maxAttempts: number; // Maximum attempts before giving up
 }
 
-const DEFAULT_CONFIG: DecoyConfig = {
-	numDecoys: 5,
-	maxAttempts: 75,
+export const DEFAULT_CONFIG: DecoyConfig = {
+	numDecoys: 4,
+	maxAttempts: 300,
 };
 
 /**
  * Adds decoy points to the grid that don't create duplicate target shapes.
  *
  * @param targetShapeType The type of shape to avoid creating duplicates of
- * @param targetPoints The points that form the target shape
- * @param visiblePoints 2D array tracking which points are visible on the grid
+ * @param targetPoints The points that form the target shape (not mutated)
+ * @param visiblePoints 2D array tracking which points are visible on the grid (mutated in place)
  * @param gridWidth Width of the grid (columns)
  * @param gridHeight Height of the grid (rows)
  * @param config Optional configuration for number of decoys and max attempts
@@ -34,8 +34,17 @@ export function addDecoyPoints(
 ): void {
 	const { numDecoys, maxAttempts } = { ...DEFAULT_CONFIG, ...config };
 
+	// Track all visible points (target + decoys) without mutating original array
+	const allVisiblePoints = [...targetPoints];
+
 	// Get all available grid positions (not currently visible)
 	let candidatePoints = getAllAvailablePoints(visiblePoints, gridWidth, gridHeight);
+
+	// Filter out points that lie on the edges of the target shape
+	// These are particularly prone to creating additional instances of the target shape
+	candidatePoints = candidatePoints.filter(
+		(point) => !liesOnShapeEdge(point, targetPoints)
+	);
 
 	let decoyCount = 0;
 	let attempts = 0;
@@ -49,7 +58,7 @@ export function addDecoyPoints(
 		const candidate = candidatePoints[candidateIndex];
 
 		// Check if adding this point would create the target shape
-		if (wouldCreateTargetShape(candidate, targetPoints, targetShapeType)) {
+		if (wouldCreateTargetShape(candidate, allVisiblePoints, targetShapeType)) {
 			// This candidate would create a duplicate shape - remove it from candidates
 			candidatePoints.splice(candidateIndex, 1);
 			continue;
@@ -57,7 +66,8 @@ export function addDecoyPoints(
 
 		// Safe to add this decoy point
 		visiblePoints[candidate.row][candidate.column] = true;
-		targetPoints.push(candidate); // Add to tracking for next iteration
+		allVisiblePoints.push(candidate); // Track locally for shape validation
+		candidatePoints.splice(candidateIndex, 1); // Remove from candidate pool
 		decoyCount++;
 	}
 
@@ -159,6 +169,84 @@ function generateCombinations<T>(arr: T[], k: number): T[][] {
 	}
 
 	return result;
+}
+
+/**
+ * Checks if a point lies on any edge of the shape formed by the given points.
+ * This helps filter out candidates that are particularly prone to creating
+ * additional instances of the target shape.
+ *
+ * @param point The point to check
+ * @param shapePoints The points forming the shape
+ * @returns true if the point lies on any edge of the shape
+ */
+function liesOnShapeEdge(point: GridPoint, shapePoints: GridPoint[]): boolean {
+	const n = shapePoints.length;
+
+	// Check each edge of the shape
+	for (let i = 0; i < n; i++) {
+		const p1 = shapePoints[i];
+		const p2 = shapePoints[(i + 1) % n];
+
+		if (isPointOnLineSegment(point, p1, p2)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Checks if a point lies on the line segment between two other points.
+ * Uses cross product to check collinearity and then verifies the point
+ * is between the segment endpoints.
+ *
+ * @param point The point to check
+ * @param segmentStart Start of the line segment
+ * @param segmentEnd End of the line segment
+ * @returns true if point lies on the segment (excluding endpoints)
+ */
+function isPointOnLineSegment(
+	point: GridPoint,
+	segmentStart: GridPoint,
+	segmentEnd: GridPoint
+): boolean {
+	// Don't filter out the actual vertices of the shape
+	if (
+		(point.row === segmentStart.row && point.column === segmentStart.column) ||
+		(point.row === segmentEnd.row && point.column === segmentEnd.column)
+	) {
+		return false;
+	}
+
+	// Vector from segmentStart to point
+	const dx1 = point.column - segmentStart.column;
+	const dy1 = point.row - segmentStart.row;
+
+	// Vector from segmentStart to segmentEnd
+	const dx2 = segmentEnd.column - segmentStart.column;
+	const dy2 = segmentEnd.row - segmentStart.row;
+
+	// Cross product to check collinearity
+	// If cross product is 0, the points are collinear
+	const crossProduct = dx1 * dy2 - dy1 * dx2;
+	if (crossProduct !== 0) {
+		return false; // Not collinear
+	}
+
+	// Check if point is between segmentStart and segmentEnd
+	// For this, check if the point is within the bounding box
+	const minX = Math.min(segmentStart.column, segmentEnd.column);
+	const maxX = Math.max(segmentStart.column, segmentEnd.column);
+	const minY = Math.min(segmentStart.row, segmentEnd.row);
+	const maxY = Math.max(segmentStart.row, segmentEnd.row);
+
+	return (
+		point.column >= minX &&
+		point.column <= maxX &&
+		point.row >= minY &&
+		point.row <= maxY
+	);
 }
 
 /**
