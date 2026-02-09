@@ -141,14 +141,18 @@
 
     <!-- Visualization Section -->
     <div class="modal-visualization">
-      <HintVisualization
-        lineHighlights={hintData.lineHighlights}
-        pointHighlights={hintData.pointHighlights}
-        angleHighlights={hintData.angleHighlights}
-        getPointCoordinates={coordinateFunction}
-        userLines={isExampleHint ? [] : userLines}
-        viewBox={viewBox}
-      />
+      {#if hintData.imageUrl}
+        <img src={hintData.imageUrl} alt={hintData.title} class="hint-image" />
+      {:else}
+        <HintVisualization
+          lineHighlights={hintData.lineHighlights}
+          pointHighlights={hintData.pointHighlights}
+          angleHighlights={hintData.angleHighlights}
+          getPointCoordinates={coordinateFunction}
+          userLines={isExampleHint ? [] : userLines}
+          viewBox={viewBox}
+        />
+      {/if}
     </div>
 
     <!-- Message Section -->
@@ -268,6 +272,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .hint-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
   }
 
   .modal-body {

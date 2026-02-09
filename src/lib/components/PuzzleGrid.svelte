@@ -244,7 +244,8 @@
                 type: 'why',
                 title: 'No Lines Drawn',
                 message: 'You need to connect points to form a shape. Click on points to draw lines between them.',
-                lineHighlights: []
+                lineHighlights: [],
+                imageUrl: '/squaredraw.gif'
             };
             showHintModal = true;
             return false;

@@ -53,6 +53,7 @@ export interface HintData {
   pointHighlights?: PointHighlight[];
   angleHighlights?: AngleHighlight[];
   detailedExplanation?: string; // Secondary text with more details
+  imageUrl?: string; // Optional image/GIF to display in the hint
 }
 
 /**
